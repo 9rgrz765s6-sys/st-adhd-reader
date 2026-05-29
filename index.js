@@ -5,19 +5,20 @@ let enabled = localStorage.getItem(`${EXT_ID}-enabled`) !== 'false';
 function applyState() {
   document.body.classList.toggle('adhd-reader-enabled', enabled);
 
-  const button = document.getElementById(`${EXT_ID}-toggle`);
+  const button = document.getElementById(`${EXT_ID}-floating-toggle`);
   if (button) {
-    button.textContent = enabled ? 'ADHD Reader: ON' : 'ADHD Reader: OFF';
+    button.textContent = enabled ? 'ADHD ON' : 'ADHD OFF';
+    button.classList.toggle('adhd-reader-button-on', enabled);
   }
 }
 
-function addButton() {
-  if (document.getElementById(`${EXT_ID}-toggle`)) return;
+function addFloatingButton() {
+  if (document.getElementById(`${EXT_ID}-floating-toggle`)) return;
 
-  const button = document.createElement('div');
-  button.id = `${EXT_ID}-toggle`;
-  button.className = 'menu_button';
-  button.textContent = 'ADHD Reader: ON';
+  const button = document.createElement('button');
+  button.id = `${EXT_ID}-floating-toggle`;
+  button.type = 'button';
+  button.textContent = 'ADHD ON';
 
   button.addEventListener('click', () => {
     enabled = !enabled;
@@ -25,13 +26,19 @@ function addButton() {
     applyState();
   });
 
-  const menu = document.getElementById('extensionsMenu');
-  if (menu) {
-    menu.appendChild(button);
-  }
+  document.body.appendChild(button);
 }
 
-jQuery(() => {
-  addButton();
+function init() {
+  addFloatingButton();
   applyState();
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+
+setTimeout(init, 1000);
+setTimeout(init, 3000);
