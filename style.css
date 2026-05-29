@@ -1,11 +1,11 @@
 body.adhd-reader-enabled .mes_text {
-  line-height: 1.72;
-  letter-spacing: 0.015em;
-  word-spacing: 0.04em;
+  line-height: var(--adhd-line-height, 1.72);
+  letter-spacing: 0.012em;
+  word-spacing: 0.035em;
   overflow-wrap: break-word;
 }
 
-/* 保留原文颜色，只改变字重 */
+/* 基础：保留原排版，只做词内视觉锚点 */
 body.adhd-reader-enabled .adhd-token {
   display: inline;
 }
@@ -16,13 +16,27 @@ body.adhd-reader-enabled .adhd-bold {
 
 body.adhd-reader-enabled .adhd-rest {
   font-weight: 400;
-  opacity: 0.78;
 }
 
-/* 不破坏原本斜体、对白颜色、主题色 */
+/* 轻度：几乎不改变原文，只给锚点 */
+body.adhd-reader-mode-light .adhd-rest {
+  opacity: 0.96;
+}
+
+/* 中度：适合中文剧情日常阅读 */
+body.adhd-reader-mode-medium .adhd-rest {
+  opacity: 0.88;
+}
+
+/* 强度：适合英文长文或非常难集中时 */
+body.adhd-reader-mode-strong .adhd-rest {
+  opacity: 0.76;
+}
+
+/* 不破坏原本斜体、对白色、主题色 */
 body.adhd-reader-enabled em .adhd-rest,
 body.adhd-reader-enabled i .adhd-rest {
-  opacity: 0.82;
+  opacity: 0.88;
 }
 
 body.adhd-reader-enabled strong .adhd-rest,
@@ -48,4 +62,20 @@ body.adhd-reader-enabled b .adhd-rest {
 
 #adhd-reader-floating-toggle.adhd-reader-button-on {
   background: rgba(62, 110, 255, 0.92);
+}
+
+#adhd-reader-floating-toggle[data-mode="light"] {
+  background: rgba(75, 125, 255, 0.88);
+}
+
+#adhd-reader-floating-toggle[data-mode="medium"] {
+  background: rgba(62, 110, 255, 0.95);
+}
+
+#adhd-reader-floating-toggle[data-mode="strong"] {
+  background: rgba(120, 80, 255, 0.96);
+}
+
+#adhd-reader-floating-toggle[data-mode="off"] {
+  background: rgba(40, 40, 40, 0.88);
 }
