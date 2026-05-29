@@ -175,30 +175,3 @@ body.adhd-reader-focus-off #adhd-reader-ruler {
 body.adhd-reader-enabled .adhd-token .adhd-bold {
   font-weight: 900;
 }
-
-/* 中文粗体在部分平板 WebView 不明显，用阴影强制增强 */
-body.adhd-reader-enabled .adhd-token .adhd-bold {
-  text-shadow:
-    0.018em 0 currentColor,
-    -0.018em 0 currentColor;
-}
-
-/* 强度越高，中文锚点越明显 */
-body.adhd-reader-mode-light .adhd-token .adhd-bold {
-  text-shadow:
-    0.012em 0 currentColor,
-    -0.012em 0 currentColor;
-}
-
-body.adhd-reader-mode-medium .adhd-token .adhd-bold {
-  text-shadow:
-    0.018em 0 currentColor,
-    -0.018em 0 currentColor;
-}
-
-body.adhd-reader-mode-strong .adhd-token .adhd-bold {
-  text-shadow:
-    0.024em 0 currentColor,
-    -0.024em 0 currentColor,
-    0 0.012em currentColor;
-}
