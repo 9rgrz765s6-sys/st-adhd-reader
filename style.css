@@ -5,7 +5,7 @@ body.adhd-reader-enabled .mes_text {
   overflow-wrap: break-word;
 }
 
-/* 基础：保留原排版，只做词内视觉锚点 */
+/* 保留原排版，只做词内视觉锚点 */
 body.adhd-reader-enabled .adhd-token {
   display: inline;
 }
@@ -18,19 +18,19 @@ body.adhd-reader-enabled .adhd-rest {
   font-weight: 400;
 }
 
-/* 轻度：几乎不改变原文，只给锚点 */
+/* 轻度：中文也能看到锚点，但不刺眼 */
 body.adhd-reader-mode-light .adhd-rest {
-  opacity: 0.96;
+  opacity: 0.92;
 }
 
-/* 中度：适合中文剧情日常阅读 */
+/* 中度：适合中文剧情长期阅读 */
 body.adhd-reader-mode-medium .adhd-rest {
-  opacity: 0.88;
+  opacity: 0.82;
 }
 
-/* 强度：适合英文长文或非常难集中时 */
+/* 强度：明显辅助，适合疲惫或注意力散的时候 */
 body.adhd-reader-mode-strong .adhd-rest {
-  opacity: 0.76;
+  opacity: 0.68;
 }
 
 /* 不破坏原本斜体、对白色、主题色 */
