@@ -86,6 +86,7 @@ function getBoldLength(token) {
   const len = token.length;
   if (len <= 1) return 0;
 
+  // 英文：保持上一版效果
   if (isEnglishWord(token)) {
     if (mode === 'light') {
       if (len <= 4) return 0;
@@ -106,23 +107,26 @@ function getBoldLength(token) {
     }
   }
 
+  // 中文：增强版，但避免单字满屏斑点
   if (hasCJK(token)) {
     if (mode === 'light') {
-      if (len <= 3) return 0;
-      if (len <= 5) return 1;
-      return 1;
+      if (len <= 1) return 0;
+      if (len <= 4) return 1;
+      return 2;
     }
 
     if (mode === 'medium') {
-      if (len <= 2) return 0;
-      if (len <= 4) return 1;
-      return 2;
+      if (len <= 1) return 0;
+      if (len <= 3) return 1;
+      if (len <= 6) return 2;
+      return 3;
     }
 
     if (mode === 'strong') {
-      if (len <= 2) return 0;
-      if (len <= 4) return 1;
-      return 2;
+      if (len <= 1) return 0;
+      if (len <= 2) return 1;
+      if (len <= 4) return 2;
+      return Math.min(3, Math.ceil(len * 0.45));
     }
   }
 
@@ -414,7 +418,6 @@ function refreshReader() {
   setTimeout(() => {
     applyState(true);
     if (button) {
-      const oldText = button.textContent;
       button.textContent = '已重刷';
       setTimeout(() => {
         updateButton();
