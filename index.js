@@ -21,6 +21,13 @@ const COLOR_LABELS = {
   soft: '彩色：柔',
 };
 
+const LAYOUT_MODES = ['auto', 'compact', 'comfort'];
+const LAYOUT_LABELS = {
+  auto: '排版：自动',
+  compact: '排版：紧凑',
+  comfort: '排版：舒展',
+};
+
 let mode = localStorage.getItem(`${EXT_ID}-mode`) || 'medium';
 if (!MODES.includes(mode)) mode = 'medium';
 
@@ -29,6 +36,9 @@ if (!FOCUS_MODES.includes(focusMode)) focusMode = 'off';
 
 let colorMode = localStorage.getItem(`${EXT_ID}-color`) || 'off';
 if (!COLOR_MODES.includes(colorMode)) colorMode = 'off';
+
+let layoutMode = localStorage.getItem(`${EXT_ID}-layout`) || 'auto';
+if (!LAYOUT_MODES.includes(layoutMode)) layoutMode = 'auto';
 
 let observer = null;
 let processing = false;
@@ -103,7 +113,6 @@ function getBoldLength(token) {
   const len = token.length;
   if (len <= 1) return 0;
 
-  // 英文：每个档位都处理
   if (isEnglishWord(token)) {
     if (mode === 'light') {
       if (len <= 4) return 0;
@@ -124,7 +133,6 @@ function getBoldLength(token) {
     }
   }
 
-  // 中文：增强版，但避免单字满屏斑点
   if (hasCJK(token)) {
     if (mode === 'light') {
       if (len <= 1) return 0;
@@ -169,7 +177,7 @@ function getSemanticClass(token) {
 
   if (
     /夜|雨|雪|风|光|影|门|窗|房间|街|天空|神殿|世界|声音|颜色|镜头|阳光|黑暗|森林|城市|海|月|冬日|夏天|空气|屏幕/.test(token) ||
-    /night|rain|snow|wind|light|shadow|door|window|room|street|sky|forest|city|sea|moon|sun|dark|world|voice|sound|glow|amber|magic|winter|summer|air|screen|forest|room|garden|river/.test(lower)
+    /night|rain|snow|wind|light|shadow|door|window|room|street|sky|forest|city|sea|moon|sun|dark|world|voice|sound|glow|amber|magic|winter|summer|air|screen|garden|river/.test(lower)
   ) {
     return 'adhd-semantic-scene';
   }
@@ -250,7 +258,7 @@ function removeReaderMarkup(element) {
   element.normalize();
 }
 
-function getLineHeightForText(text) {
+function getTypographyForText(text) {
   const length = text.length;
   const cjk = countCJK(text);
   const latin = countLatin(text);
@@ -259,27 +267,88 @@ function getLineHeightForText(text) {
   const width = window.innerWidth || 390;
 
   let lineHeight;
+  let paragraphGap;
+  let letterSpacing;
+  let wordSpacing;
+  let maxWidth;
 
   if (cjkRatio > 0.55) {
-    lineHeight = length > 500 ? 1.82 : 1.74;
+    lineHeight = length > 700 ? 1.88 : length > 350 ? 1.82 : 1.74;
+    paragraphGap = length > 700 ? 0.95 : length > 350 ? 0.78 : 0.58;
+    letterSpacing = length > 350 ? 0.018 : 0.012;
+    wordSpacing = 0.03;
+    maxWidth = '72ch';
   } else if (cjkRatio < 0.25) {
-    lineHeight = length > 500 ? 1.68 : 1.58;
+    lineHeight = length > 700 ? 1.72 : length > 350 ? 1.66 : 1.58;
+    paragraphGap = length > 700 ? 0.82 : length > 350 ? 0.66 : 0.48;
+    letterSpacing = 0.006;
+    wordSpacing = length > 350 ? 0.075 : 0.055;
+    maxWidth = '70ch';
   } else {
-    lineHeight = length > 500 ? 1.76 : 1.66;
+    lineHeight = length > 700 ? 1.82 : length > 350 ? 1.76 : 1.66;
+    paragraphGap = length > 700 ? 0.88 : length > 350 ? 0.72 : 0.52;
+    letterSpacing = 0.012;
+    wordSpacing = 0.045;
+    maxWidth = '71ch';
   }
 
-  if (width < 430) lineHeight += 0.04;
-  if (width > 760) lineHeight -= 0.04;
+  if (width < 430) {
+    lineHeight += 0.04;
+    paragraphGap += 0.08;
+    maxWidth = '100%';
+  }
 
-  if (mode === 'light') lineHeight -= 0.03;
-  if (mode === 'strong') lineHeight += 0.03;
+  if (width > 760) {
+    lineHeight -= 0.04;
+    paragraphGap -= 0.05;
+    maxWidth = '76ch';
+  }
 
-  return Math.max(1.52, Math.min(1.9, lineHeight)).toFixed(2);
+  if (mode === 'light') {
+    lineHeight -= 0.02;
+  }
+
+  if (mode === 'strong') {
+    lineHeight += 0.03;
+    letterSpacing += 0.003;
+  }
+
+  if (layoutMode === 'compact') {
+    lineHeight -= 0.10;
+    paragraphGap -= 0.16;
+    letterSpacing -= 0.004;
+    wordSpacing -= 0.015;
+  }
+
+  if (layoutMode === 'comfort') {
+    lineHeight += 0.12;
+    paragraphGap += 0.20;
+    letterSpacing += 0.006;
+    wordSpacing += 0.018;
+  }
+
+  lineHeight = Math.max(1.48, Math.min(1.98, lineHeight));
+  paragraphGap = Math.max(0.28, Math.min(1.2, paragraphGap));
+  letterSpacing = Math.max(0, Math.min(0.032, letterSpacing));
+  wordSpacing = Math.max(0, Math.min(0.095, wordSpacing));
+
+  return {
+    lineHeight: lineHeight.toFixed(2),
+    paragraphGap: `${paragraphGap.toFixed(2)}em`,
+    letterSpacing: `${letterSpacing.toFixed(3)}em`,
+    wordSpacing: `${wordSpacing.toFixed(3)}em`,
+    maxWidth,
+  };
 }
 
-function applyAutoSpacing(element, text) {
-  const lineHeight = getLineHeightForText(text);
-  element.style.setProperty('--adhd-line-height', lineHeight);
+function applyAdaptiveTypography(element, text) {
+  const typography = getTypographyForText(text);
+
+  element.style.setProperty('--adhd-line-height', typography.lineHeight);
+  element.style.setProperty('--adhd-paragraph-gap', typography.paragraphGap);
+  element.style.setProperty('--adhd-letter-spacing', typography.letterSpacing);
+  element.style.setProperty('--adhd-word-spacing', typography.wordSpacing);
+  element.style.setProperty('--adhd-max-width', typography.maxWidth);
 }
 
 function processElement(element, force = false) {
@@ -291,22 +360,24 @@ function processElement(element, force = false) {
   const alreadyDone = element.dataset.adhdReaderDone === '1';
   const oldSignature = element.dataset.adhdReaderSignature || '';
   const oldMode = element.dataset.adhdReaderMode || '';
+  const oldLayout = element.dataset.adhdReaderLayout || '';
   const hasMarkup = Boolean(element.querySelector('.adhd-token'));
 
   if (
     alreadyDone &&
-    (currentSignature !== oldSignature || oldMode !== mode || !hasMarkup)
+    (currentSignature !== oldSignature || oldMode !== mode || oldLayout !== layoutMode || !hasMarkup)
   ) {
     restoreElement(element);
   }
 
   if (!force && element.dataset.adhdReaderDone === '1') {
-    applyAutoSpacing(element, currentSignature);
+    applyAdaptiveTypography(element, currentSignature);
     return;
   }
 
   element.dataset.adhdOriginalHtml = element.innerHTML;
   element.dataset.adhdReaderMode = mode;
+  element.dataset.adhdReaderLayout = layoutMode;
 
   const walker = document.createTreeWalker(
     element,
@@ -334,9 +405,10 @@ function processElement(element, force = false) {
   element.dataset.adhdReaderDone = '1';
   element.dataset.adhdReaderSignature = getCleanSignature(element);
   element.dataset.adhdReaderMode = mode;
+  element.dataset.adhdReaderLayout = layoutMode;
   element.classList.add('adhd-reader-active-text');
 
-  applyAutoSpacing(element, currentSignature);
+  applyAdaptiveTypography(element, currentSignature);
 }
 
 function restoreElement(element) {
@@ -354,9 +426,14 @@ function restoreElement(element) {
   delete element.dataset.adhdReaderDone;
   delete element.dataset.adhdReaderSignature;
   delete element.dataset.adhdReaderMode;
+  delete element.dataset.adhdReaderLayout;
 
   element.classList.remove('adhd-reader-active-text');
   element.style.removeProperty('--adhd-line-height');
+  element.style.removeProperty('--adhd-paragraph-gap');
+  element.style.removeProperty('--adhd-letter-spacing');
+  element.style.removeProperty('--adhd-word-spacing');
+  element.style.removeProperty('--adhd-max-width');
 }
 
 function getTargetMessages() {
@@ -422,12 +499,16 @@ function updateBodyClasses() {
     'adhd-reader-focus-soft',
     'adhd-reader-focus-strong',
     'adhd-reader-color-off',
-    'adhd-reader-color-soft'
+    'adhd-reader-color-soft',
+    'adhd-reader-layout-auto',
+    'adhd-reader-layout-compact',
+    'adhd-reader-layout-comfort'
   );
 
   document.body.classList.add(`adhd-reader-mode-${mode}`);
   document.body.classList.add(`adhd-reader-focus-${focusMode}`);
   document.body.classList.add(`adhd-reader-color-${colorMode}`);
+  document.body.classList.add(`adhd-reader-layout-${layoutMode}`);
   document.body.classList.toggle('adhd-reader-enabled', isEnabled());
 }
 
@@ -471,6 +552,19 @@ function cycleColor() {
   applyState(false);
 }
 
+function cycleLayout() {
+  const currentIndex = LAYOUT_MODES.indexOf(layoutMode);
+  layoutMode = LAYOUT_MODES[(currentIndex + 1) % LAYOUT_MODES.length];
+
+  localStorage.setItem(`${EXT_ID}-layout`, layoutMode);
+
+  restoreAllMessages();
+
+  setTimeout(() => {
+    applyState(true);
+  }, 60);
+}
+
 function refreshReader() {
   restoreAllMessages();
 
@@ -512,6 +606,9 @@ function updateSettingsPanel() {
   const modeButton = document.getElementById(`${EXT_ID}-mode-button`);
   if (modeButton) modeButton.textContent = `模式：${MODE_LABELS[mode]}`;
 
+  const layoutButton = document.getElementById(`${EXT_ID}-layout-button`);
+  if (layoutButton) layoutButton.textContent = LAYOUT_LABELS[layoutMode];
+
   const focusButton = document.getElementById(`${EXT_ID}-focus-button`);
   if (focusButton) focusButton.textContent = FOCUS_LABELS[focusMode];
 
@@ -539,9 +636,10 @@ function addSettingsPanel() {
 
   wrapper.innerHTML = `
     <div class="adhd-reader-settings-title">ADHD Reader</div>
-    <div class="adhd-reader-settings-desc">仿生阅读、自动行距、聚焦线与轻量高亮。</div>
+    <div class="adhd-reader-settings-desc">仿生阅读、自动排版、聚焦线与轻量高亮。</div>
     <div class="adhd-reader-settings-buttons">
       <button type="button" id="${EXT_ID}-mode-button">模式</button>
+      <button type="button" id="${EXT_ID}-layout-button">排版</button>
       <button type="button" id="${EXT_ID}-focus-button">聚焦</button>
       <button type="button" id="${EXT_ID}-color-button">彩色</button>
       <button type="button" id="${EXT_ID}-refresh-button">重刷</button>
@@ -551,6 +649,7 @@ function addSettingsPanel() {
   root.prepend(wrapper);
 
   document.getElementById(`${EXT_ID}-mode-button`)?.addEventListener('click', cycleMode);
+  document.getElementById(`${EXT_ID}-layout-button`)?.addEventListener('click', cycleLayout);
   document.getElementById(`${EXT_ID}-focus-button`)?.addEventListener('click', cycleFocus);
   document.getElementById(`${EXT_ID}-color-button`)?.addEventListener('click', cycleColor);
   document.getElementById(`${EXT_ID}-refresh-button`)?.addEventListener('click', refreshReader);
