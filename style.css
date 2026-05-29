@@ -1,0 +1,27 @@
+body.adhd-reader-enabled .mes_text {
+  max-width: 68ch;
+  line-height: 1.9;
+  letter-spacing: 0.035em;
+  word-spacing: 0.08em;
+  font-size: 1.05em;
+  overflow-wrap: break-word;
+}
+
+body.adhd-reader-enabled .mes_text p,
+body.adhd-reader-enabled .mes_text div {
+  margin-bottom: 0.9em;
+}
+
+body.adhd-reader-enabled .mes {
+  padding-top: 0.45em;
+  padding-bottom: 0.45em;
+}
+
+body.adhd-reader-enabled .mes_text strong,
+body.adhd-reader-enabled .mes_text b {
+  font-weight: 800;
+}
+
+#adhd-reader-toggle {
+  cursor: pointer;
+}
