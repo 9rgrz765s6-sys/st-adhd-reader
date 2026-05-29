@@ -103,8 +103,7 @@ function countLatin(text) {
 
 /**
  * 中文 fallback 分词器：
- * 目的不是做真正 NLP 分词，而是给仿生阅读提供稳定的短词视觉锚点。
- * 这样 iPad / 平板 / WebView 即使没有可靠 Intl.Segmenter，也能处理中文。
+ * 如果系统把中文拆成单字，或完全不分词，就用这个稳定兜底。
  */
 function splitChineseBuffer(text) {
   const result = [];
@@ -185,16 +184,30 @@ function segmentText(text) {
       const segmented = Array.from(segmenter.segment(text)).map(item => item.segment);
 
       const hasChinese = /[\u3400-\u9fff]/.test(text);
-      const hasLongChineseChunk = segmented.some(part => {
-        return /^[\u3400-\u9fff]+$/.test(part) && part.length >= 7;
-      });
+
+      const chineseSegments = segmented.filter(part =>
+        /^[\u3400-\u9fff]+$/.test(part)
+      );
+
+      const singleChineseSegments = chineseSegments.filter(part =>
+        part.length === 1
+      );
+
+      const hasLongChineseChunk = chineseSegments.some(part =>
+        part.length >= 7
+      );
 
       const tooFewSegments =
         hasChinese &&
         text.length >= 12 &&
         segmented.filter(part => part.trim()).length <= 2;
 
-      if (!hasLongChineseChunk && !tooFewSegments) {
+      const tooManySingleChinese =
+        hasChinese &&
+        chineseSegments.length >= 6 &&
+        singleChineseSegments.length / chineseSegments.length > 0.65;
+
+      if (!hasLongChineseChunk && !tooFewSegments && !tooManySingleChinese) {
         return segmented;
       }
     }
