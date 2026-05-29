@@ -1,8 +1,18 @@
 body.adhd-reader-enabled .mes_text {
   line-height: var(--adhd-line-height, 1.72);
-  letter-spacing: 0.012em;
-  word-spacing: 0.035em;
+  letter-spacing: var(--adhd-letter-spacing, 0.012em);
+  word-spacing: var(--adhd-word-spacing, 0.035em);
+  max-width: min(var(--adhd-max-width, 72ch), 100%);
   overflow-wrap: break-word;
+}
+
+body.adhd-reader-enabled .mes_text p,
+body.adhd-reader-enabled .mes_text div {
+  margin-bottom: var(--adhd-paragraph-gap, 0.62em);
+}
+
+body.adhd-reader-enabled .mes_text br {
+  line-height: calc(var(--adhd-line-height, 1.72) * 0.92);
 }
 
 body.adhd-reader-enabled .adhd-token {
@@ -39,7 +49,6 @@ body.adhd-reader-enabled b .adhd-rest {
   opacity: 1;
 }
 
-/* 彩色高亮：默认关闭，只有“彩色：柔”开启时生效 */
 body.adhd-reader-color-soft .adhd-semantic-emotion .adhd-bold {
   color: rgba(255, 150, 185, 1);
 }
@@ -52,7 +61,6 @@ body.adhd-reader-color-soft .adhd-semantic-scene .adhd-bold {
   color: rgba(130, 205, 255, 1);
 }
 
-/* 扩展设置页控制面板 */
 .adhd-reader-settings-panel {
   margin: 10px 0;
   padding: 12px;
@@ -89,7 +97,6 @@ body.adhd-reader-color-soft .adhd-semantic-scene .adhd-bold {
   font-weight: 700;
 }
 
-/* 聚焦线 */
 #adhd-reader-ruler {
   position: fixed;
   left: 0;
