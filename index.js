@@ -1,6 +1,9 @@
 const EXT_ID = 'adhd-reader';
 
 let enabled = localStorage.getItem(`${EXT_ID}-enabled`) !== 'false';
+let observer = null;
+let processing = false;
+let pendingTimer = null;
 
 const SKIP_TAGS = new Set([
   'SCRIPT',
@@ -38,7 +41,9 @@ function segmentText(text) {
     console.warn('[ADHD Reader] Segmenter failed:', error);
   }
 
-  return text.split(/(\s+|[。，、！？；：,.!?;:()[\]{}《》“”‘’"'—…·\-])/g).filter(Boolean);
+  return text
+    .split(/(\s+|[。，、！？；：,.!?;:()[\]{}《》“”‘’"'—…·\-])/g)
+    .filter(Boolean);
 }
 
 function getBoldLength(token) {
@@ -114,10 +119,46 @@ function shouldSkipTextNode(node) {
   return false;
 }
 
-function processElement(element) {
-  if (!element) return;
-  if (element.dataset.adhdReaderDone === '1') return;
+function getCleanSignature(element) {
+  return (element.innerText || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 500);
+}
 
+function removeReaderMarkup(element) {
+  const tokens = element.querySelectorAll('.adhd-token');
+
+  tokens.forEach(token => {
+    const text = document.createTextNode(token.innerText);
+    token.replaceWith(text);
+  });
+
+  element.normalize();
+}
+
+function processElement(element, force = false) {
+  if (!element) return;
+
+  const currentSignature = getCleanSignature(element);
+  if (!currentSignature) return;
+
+  const alreadyDone = element.dataset.adhdReaderDone === '1';
+  const oldSignature = element.dataset.adhdReaderSignature || '';
+  const hasMarkup = Boolean(element.querySelector('.adhd-token'));
+
+  // 角色/聊天切换后，酒馆可能复用 DOM：
+  // dataset 还在，但正文已经变了，所以必须重置。
+  if (alreadyDone && (currentSignature !== oldSignature || !hasMarkup)) {
+    delete element.dataset.adhdReaderDone;
+    delete element.dataset.adhdReaderSignature;
+    delete element.dataset.adhdOriginalHtml;
+    removeReaderMarkup(element);
+  }
+
+  if (!force && element.dataset.adhdReaderDone === '1') return;
+
+  // 保存当前原始 HTML。注意：这里保存的是“当前角色/当前消息”的原文。
   element.dataset.adhdOriginalHtml = element.innerHTML;
 
   const walker = document.createTreeWalker(
@@ -144,6 +185,7 @@ function processElement(element) {
   }
 
   element.dataset.adhdReaderDone = '1';
+  element.dataset.adhdReaderSignature = getCleanSignature(element);
   element.classList.add('adhd-reader-active-text');
 }
 
@@ -151,23 +193,56 @@ function restoreElement(element) {
   if (!element) return;
 
   const originalHtml = element.dataset.adhdOriginalHtml;
-  if (!originalHtml) return;
 
-  element.innerHTML = originalHtml;
+  if (originalHtml) {
+    element.innerHTML = originalHtml;
+  } else {
+    removeReaderMarkup(element);
+  }
+
   delete element.dataset.adhdOriginalHtml;
   delete element.dataset.adhdReaderDone;
+  delete element.dataset.adhdReaderSignature;
   element.classList.remove('adhd-reader-active-text');
 }
 
-function processAllMessages() {
-  document.querySelectorAll('.mes_text').forEach(processElement);
+function processAllMessages(force = false) {
+  if (processing) return;
+
+  processing = true;
+
+  try {
+    document.querySelectorAll('.mes_text').forEach(element => {
+      processElement(element, force);
+    });
+  } finally {
+    processing = false;
+  }
 }
 
 function restoreAllMessages() {
-  document.querySelectorAll('.mes_text').forEach(restoreElement);
+  if (processing) return;
+
+  processing = true;
+
+  try {
+    document.querySelectorAll('.mes_text').forEach(restoreElement);
+  } finally {
+    processing = false;
+  }
 }
 
-function applyState() {
+function scheduleProcess(force = false) {
+  if (!enabled) return;
+
+  clearTimeout(pendingTimer);
+
+  pendingTimer = setTimeout(() => {
+    processAllMessages(force);
+  }, 180);
+}
+
+function applyState(force = false) {
   document.body.classList.toggle('adhd-reader-enabled', enabled);
 
   const button = document.getElementById(`${EXT_ID}-floating-toggle`);
@@ -177,50 +252,84 @@ function applyState() {
   }
 
   if (enabled) {
-    processAllMessages();
+    processAllMessages(force);
   } else {
     restoreAllMessages();
   }
 }
 
 function addFloatingButton() {
-  if (document.getElementById(`${EXT_ID}-floating-toggle`)) return;
+  let button = document.getElementById(`${EXT_ID}-floating-toggle`);
 
-  const button = document.createElement('button');
-  button.id = `${EXT_ID}-floating-toggle`;
-  button.type = 'button';
-  button.textContent = 'ADHD ON';
+  if (!button) {
+    button = document.createElement('button');
+    button.id = `${EXT_ID}-floating-toggle`;
+    button.type = 'button';
 
-  button.addEventListener('click', () => {
-    enabled = !enabled;
-    localStorage.setItem(`${EXT_ID}-enabled`, String(enabled));
-    applyState();
-  });
+    button.addEventListener('click', () => {
+      enabled = !enabled;
+      localStorage.setItem(`${EXT_ID}-enabled`, String(enabled));
 
-  document.body.appendChild(button);
+      // 点按钮时强制刷新，防止后台换角色后状态不同步。
+      applyState(true);
+    });
+
+    document.body.appendChild(button);
+  }
+
+  button.textContent = enabled ? 'ADHD ON' : 'ADHD OFF';
+  button.classList.toggle('adhd-reader-button-on', enabled);
 }
 
-function observeNewMessages() {
-  const chat = document.getElementById('chat');
-  if (!chat) return;
+function observeWholeApp() {
+  if (observer) observer.disconnect();
 
-  const observer = new MutationObserver(() => {
-    if (enabled) {
-      setTimeout(processAllMessages, 120);
+  observer = new MutationObserver(mutations => {
+    if (!enabled || processing) return;
+
+    let shouldProcess = false;
+
+    for (const mutation of mutations) {
+      if (mutation.type === 'childList') {
+        shouldProcess = true;
+        break;
+      }
+
+      if (mutation.type === 'characterData') {
+        shouldProcess = true;
+        break;
+      }
+    }
+
+    if (shouldProcess) {
+      scheduleProcess(false);
     }
   });
 
-  observer.observe(chat, {
+  // 不只监听 #chat，因为 TauriTavern 切换角色时可能整个聊天区域被替换。
+  observer.observe(document.body, {
     childList: true,
     subtree: true,
+    characterData: true,
   });
 }
 
 function init() {
   addFloatingButton();
-  applyState();
-  observeNewMessages();
+  observeWholeApp();
+  applyState(true);
 }
+
+// 暴露一个调试入口，万一卡住可以在控制台调用。
+// 手机端一般用不到，但留着不影响。
+window.ADHDReaderRefresh = function () {
+  applyState(true);
+};
+
+window.ADHDReaderReset = function () {
+  restoreAllMessages();
+  setTimeout(() => applyState(true), 100);
+};
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
@@ -228,5 +337,6 @@ if (document.readyState === 'loading') {
   init();
 }
 
-setTimeout(init, 1000);
-setTimeout(init, 3000);
+setTimeout(init, 800);
+setTimeout(() => applyState(true), 1800);
+setTimeout(() => applyState(true), 3500);
