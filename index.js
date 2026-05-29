@@ -2,106 +2,169 @@ const EXT_ID = 'adhd-reader';
 
 let enabled = localStorage.getItem(`${EXT_ID}-enabled`) !== 'false';
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+const SKIP_TAGS = new Set([
+  'SCRIPT',
+  'STYLE',
+  'TEXTAREA',
+  'INPUT',
+  'BUTTON',
+  'CODE',
+  'PRE',
+  'KBD',
+  'SAMP',
+]);
+
+function isWhitespaceOrPunctuation(text) {
+  return /^[\s。，、！？；：,.!?;:()[\]{}《》“”‘’"'—…·\-]+$/.test(text);
 }
 
-function splitIntoReadableChunks(text) {
-  const clean = text
-    .replace(/\r/g, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+function isEnglishWord(token) {
+  return /^[A-Za-z0-9][A-Za-z0-9'-]*$/.test(token);
+}
 
-  const rawParts = clean
-    .split(/(?<=[。！？!?；;：:])\s*/g)
-    .map(s => s.trim())
-    .filter(Boolean);
+function hasCJK(token) {
+  return /[\u3400-\u9fff]/.test(token);
+}
 
-  const chunks = [];
-  let buffer = '';
+function segmentText(text) {
+  if (!text.trim()) return [text];
 
-  for (const part of rawParts) {
-    if ((buffer + part).length > 70) {
-      if (buffer) chunks.push(buffer.trim());
-      buffer = part;
-    } else {
-      buffer += part;
+  try {
+    if (window.Intl && Intl.Segmenter) {
+      const segmenter = new Intl.Segmenter('zh-Hans', { granularity: 'word' });
+      return Array.from(segmenter.segment(text)).map(item => item.segment);
     }
+  } catch (error) {
+    console.warn('[ADHD Reader] Segmenter failed:', error);
   }
 
-  if (buffer.trim()) chunks.push(buffer.trim());
-
-  return chunks;
+  return text.split(/(\s+|[。，、！？；：,.!?;:()[\]{}《》“”‘’"'—…·\-])/g).filter(Boolean);
 }
 
-function highlightAnchor(text) {
-  const safe = escapeHtml(text);
+function getBoldLength(token) {
+  const len = token.length;
 
-  if (safe.length <= 8) {
-    return `<span class="adhd-reader-anchor">${safe}</span>`;
+  if (len <= 1) return 0;
+
+  if (isEnglishWord(token)) {
+    if (len <= 3) return 1;
+    if (len <= 5) return 2;
+    return Math.ceil(len * 0.42);
   }
 
-  const anchorLength = Math.min(8, Math.ceil(safe.length * 0.18));
-  return `<span class="adhd-reader-anchor">${safe.slice(0, anchorLength)}</span>${safe.slice(anchorLength)}`;
+  if (hasCJK(token)) {
+    if (len <= 2) return 1;
+    if (len <= 4) return 1;
+    return 2;
+  }
+
+  return 0;
 }
 
-function makeReadableHtml(text) {
-  const chunks = splitIntoReadableChunks(text);
+function createReadableFragment(text) {
+  const fragment = document.createDocumentFragment();
+  const tokens = segmentText(text);
 
-  return chunks
-    .map((chunk, index) => {
-      return `
-        <div class="adhd-reader-block">
-          <span class="adhd-reader-index">${index + 1}</span>
-          <span class="adhd-reader-line">${highlightAnchor(chunk)}</span>
-        </div>
-      `;
-    })
-    .join('');
+  for (const token of tokens) {
+    if (!token) continue;
+
+    if (!token.trim() || isWhitespaceOrPunctuation(token)) {
+      fragment.appendChild(document.createTextNode(token));
+      continue;
+    }
+
+    const cut = getBoldLength(token);
+
+    if (cut <= 0 || cut >= token.length) {
+      fragment.appendChild(document.createTextNode(token));
+      continue;
+    }
+
+    const wrapper = document.createElement('span');
+    wrapper.className = 'adhd-token';
+
+    const bold = document.createElement('span');
+    bold.className = 'adhd-bold';
+    bold.textContent = token.slice(0, cut);
+
+    const rest = document.createElement('span');
+    rest.className = 'adhd-rest';
+    rest.textContent = token.slice(cut);
+
+    wrapper.appendChild(bold);
+    wrapper.appendChild(rest);
+    fragment.appendChild(wrapper);
+  }
+
+  return fragment;
 }
 
-function processMessage(messageElement) {
-  if (!enabled) return;
-  if (!messageElement) return;
-  if (messageElement.dataset.adhdReaderDone === '1') return;
+function shouldSkipTextNode(node) {
+  if (!node || !node.parentElement) return true;
 
-  const textElement = messageElement.querySelector('.mes_text');
-  if (!textElement) return;
+  let current = node.parentElement;
 
-  const originalText = textElement.innerText;
-  if (!originalText.trim()) return;
+  while (current) {
+    if (SKIP_TAGS.has(current.tagName)) return true;
+    if (current.classList?.contains('adhd-token')) return true;
+    if (current.id === `${EXT_ID}-floating-toggle`) return true;
+    current = current.parentElement;
+  }
 
-  textElement.dataset.adhdOriginalHtml = textElement.innerHTML;
-  textElement.innerHTML = makeReadableHtml(originalText);
-
-  messageElement.classList.add('adhd-reader-processed');
-  messageElement.dataset.adhdReaderDone = '1';
+  return false;
 }
 
-function restoreMessage(messageElement) {
-  if (!messageElement) return;
+function processElement(element) {
+  if (!element) return;
+  if (element.dataset.adhdReaderDone === '1') return;
 
-  const textElement = messageElement.querySelector('.mes_text');
-  if (!textElement) return;
+  element.dataset.adhdOriginalHtml = element.innerHTML;
 
-  const originalHtml = textElement.dataset.adhdOriginalHtml;
+  const walker = document.createTreeWalker(
+    element,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode(node) {
+        if (shouldSkipTextNode(node)) return NodeFilter.FILTER_REJECT;
+        if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    }
+  );
+
+  const textNodes = [];
+
+  while (walker.nextNode()) {
+    textNodes.push(walker.currentNode);
+  }
+
+  for (const node of textNodes) {
+    const fragment = createReadableFragment(node.nodeValue);
+    node.parentNode.replaceChild(fragment, node);
+  }
+
+  element.dataset.adhdReaderDone = '1';
+  element.classList.add('adhd-reader-active-text');
+}
+
+function restoreElement(element) {
+  if (!element) return;
+
+  const originalHtml = element.dataset.adhdOriginalHtml;
   if (!originalHtml) return;
 
-  textElement.innerHTML = originalHtml;
-
-  delete textElement.dataset.adhdOriginalHtml;
-  delete messageElement.dataset.adhdReaderDone;
-  messageElement.classList.remove('adhd-reader-processed');
+  element.innerHTML = originalHtml;
+  delete element.dataset.adhdOriginalHtml;
+  delete element.dataset.adhdReaderDone;
+  element.classList.remove('adhd-reader-active-text');
 }
 
 function processAllMessages() {
-  document.querySelectorAll('.mes').forEach(processMessage);
+  document.querySelectorAll('.mes_text').forEach(processElement);
 }
 
 function restoreAllMessages() {
-  document.querySelectorAll('.mes').forEach(restoreMessage);
+  document.querySelectorAll('.mes_text').forEach(restoreElement);
 }
 
 function applyState() {
@@ -143,7 +206,7 @@ function observeNewMessages() {
 
   const observer = new MutationObserver(() => {
     if (enabled) {
-      setTimeout(processAllMessages, 80);
+      setTimeout(processAllMessages, 120);
     }
   });
 
