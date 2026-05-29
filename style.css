@@ -5,7 +5,6 @@ body.adhd-reader-enabled .mes_text {
   overflow-wrap: break-word;
 }
 
-/* 保留原排版，只做词内视觉锚点 */
 body.adhd-reader-enabled .adhd-token {
   display: inline;
 }
@@ -18,22 +17,18 @@ body.adhd-reader-enabled .adhd-rest {
   font-weight: 400;
 }
 
-/* 轻度：中文也能看到锚点，但不刺眼 */
 body.adhd-reader-mode-light .adhd-rest {
   opacity: 0.92;
 }
 
-/* 中度：适合中文剧情长期阅读 */
 body.adhd-reader-mode-medium .adhd-rest {
   opacity: 0.82;
 }
 
-/* 强度：明显辅助，适合疲惫或注意力散的时候 */
 body.adhd-reader-mode-strong .adhd-rest {
   opacity: 0.68;
 }
 
-/* 不破坏原本斜体、对白色、主题色 */
 body.adhd-reader-enabled em .adhd-rest,
 body.adhd-reader-enabled i .adhd-rest {
   opacity: 0.88;
@@ -44,7 +39,20 @@ body.adhd-reader-enabled b .adhd-rest {
   opacity: 1;
 }
 
-/* 悬浮按钮 */
+/* 彩色高亮：默认关闭，只有 Color Soft 开启时生效 */
+body.adhd-reader-color-soft .adhd-semantic-emotion .adhd-bold {
+  color: rgba(255, 150, 185, 1);
+}
+
+body.adhd-reader-color-soft .adhd-semantic-action .adhd-bold {
+  color: rgba(255, 190, 110, 1);
+}
+
+body.adhd-reader-color-soft .adhd-semantic-scene .adhd-bold {
+  color: rgba(130, 205, 255, 1);
+}
+
+/* 主按钮 */
 #adhd-reader-floating-toggle {
   position: fixed;
   right: 14px;
@@ -78,4 +86,68 @@ body.adhd-reader-enabled b .adhd-rest {
 
 #adhd-reader-floating-toggle[data-mode="off"] {
   background: rgba(40, 40, 40, 0.88);
+}
+
+/* 设置面板 */
+#adhd-reader-panel {
+  position: fixed;
+  right: 12px;
+  bottom: 122px;
+  z-index: 999998;
+  display: none;
+  flex-direction: column;
+  gap: 7px;
+  padding: 9px;
+  border-radius: 14px;
+  background: rgba(20, 20, 20, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(8px);
+}
+
+#adhd-reader-panel.adhd-reader-panel-open {
+  display: flex;
+}
+
+#adhd-reader-panel button {
+  min-width: 86px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* 聚焦线 */
+#adhd-reader-ruler {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 36px;
+  z-index: 999990;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+
+body.adhd-reader-focus-soft #adhd-reader-ruler {
+  background: rgba(255, 230, 150, 0.10);
+  border-top: 1px solid rgba(255, 230, 150, 0.16);
+  border-bottom: 1px solid rgba(255, 230, 150, 0.16);
+}
+
+body.adhd-reader-focus-strong #adhd-reader-ruler {
+  background: rgba(255, 230, 150, 0.18);
+  border-top: 1px solid rgba(255, 230, 150, 0.28);
+  border-bottom: 1px solid rgba(255, 230, 150, 0.28);
+}
+
+body.adhd-reader-focus-off #adhd-reader-ruler {
+  display: none;
+}
+
+#adhd-reader-ruler.adhd-reader-ruler-visible {
+  opacity: 1;
 }
