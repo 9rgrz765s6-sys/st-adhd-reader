@@ -25,3 +25,21 @@ body.adhd-reader-enabled .mes_text b {
 #adhd-reader-toggle {
   cursor: pointer;
 }
+#adhd-reader-floating-toggle {
+  position: fixed;
+  right: 14px;
+  bottom: 76px;
+  z-index: 999999;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(40, 40, 40, 0.88);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+#adhd-reader-floating-toggle.adhd-reader-button-on {
+  background: rgba(62, 110, 255, 0.92);
+}
