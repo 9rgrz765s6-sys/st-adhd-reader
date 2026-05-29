@@ -39,7 +39,7 @@ body.adhd-reader-enabled b .adhd-rest {
   opacity: 1;
 }
 
-/* 彩色高亮：默认关闭，只有 Color Soft 开启时生效 */
+/* 彩色高亮：默认关闭，只有“彩色：柔”开启时生效 */
 body.adhd-reader-color-soft .adhd-semantic-emotion .adhd-bold {
   color: rgba(255, 150, 185, 1);
 }
@@ -52,70 +52,39 @@ body.adhd-reader-color-soft .adhd-semantic-scene .adhd-bold {
   color: rgba(130, 205, 255, 1);
 }
 
-/* 主按钮 */
-#adhd-reader-floating-toggle {
-  position: fixed;
-  right: 14px;
-  bottom: 76px;
-  z-index: 999999;
-  padding: 8px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(40, 40, 40, 0.88);
-  color: white;
-  font-size: 13px;
+/* 扩展设置页控制面板 */
+.adhd-reader-settings-panel {
+  margin: 10px 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.adhd-reader-settings-title {
+  font-size: 16px;
   font-weight: 800;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  margin-bottom: 4px;
 }
 
-#adhd-reader-floating-toggle.adhd-reader-button-on {
-  background: rgba(62, 110, 255, 0.92);
+.adhd-reader-settings-desc {
+  font-size: 12px;
+  opacity: 0.72;
+  margin-bottom: 10px;
 }
 
-#adhd-reader-floating-toggle[data-mode="light"] {
-  background: rgba(75, 125, 255, 0.88);
-}
-
-#adhd-reader-floating-toggle[data-mode="medium"] {
-  background: rgba(62, 110, 255, 0.95);
-}
-
-#adhd-reader-floating-toggle[data-mode="strong"] {
-  background: rgba(120, 80, 255, 0.96);
-}
-
-#adhd-reader-floating-toggle[data-mode="off"] {
-  background: rgba(40, 40, 40, 0.88);
-}
-
-/* 设置面板 */
-#adhd-reader-panel {
-  position: fixed;
-  right: 12px;
-  bottom: 122px;
-  z-index: 999998;
-  display: none;
-  flex-direction: column;
-  gap: 7px;
-  padding: 9px;
-  border-radius: 14px;
-  background: rgba(20, 20, 20, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.38);
-  backdrop-filter: blur(8px);
-}
-
-#adhd-reader-panel.adhd-reader-panel-open {
+.adhd-reader-settings-buttons {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-#adhd-reader-panel button {
-  min-width: 86px;
+.adhd-reader-settings-buttons button {
   padding: 7px 10px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   background: rgba(255, 255, 255, 0.08);
-  color: white;
+  color: inherit;
   font-size: 12px;
   font-weight: 700;
 }
