@@ -43,6 +43,8 @@ if (!LAYOUT_MODES.includes(layoutMode)) layoutMode = 'auto';
 let observer = null;
 let processing = false;
 let pendingTimer = null;
+let mountTimer = null;
+let fallbackVisible = false;
 
 const SKIP_TAGS = new Set([
   'SCRIPT',
@@ -233,6 +235,7 @@ function shouldSkipTextNode(node) {
     if (SKIP_TAGS.has(current.tagName)) return true;
     if (current.classList?.contains('adhd-token')) return true;
     if (current.closest?.(`#${EXT_ID}-settings-panel`)) return true;
+    if (current.closest?.(`#${EXT_ID}-fallback-bar`)) return true;
     if (current.closest?.(`#${EXT_ID}-ruler`)) return true;
     if (current.closest?.('[data-adhd-skip="true"]')) return true;
     current = current.parentElement;
@@ -304,9 +307,7 @@ function getTypographyForText(text) {
     maxWidth = '76ch';
   }
 
-  if (mode === 'light') {
-    lineHeight -= 0.02;
-  }
+  if (mode === 'light') lineHeight -= 0.02;
 
   if (mode === 'strong') {
     lineHeight += 0.03;
@@ -514,7 +515,7 @@ function updateBodyClasses() {
 
 function applyState(force = false) {
   updateBodyClasses();
-  updateSettingsPanel();
+  updateAllControls();
 
   if (isEnabled()) {
     processAllMessages(force);
@@ -571,13 +572,30 @@ function refreshReader() {
   setTimeout(() => {
     applyState(true);
 
-    const refreshButton = document.getElementById(`${EXT_ID}-refresh-button`);
-    if (refreshButton) {
-      refreshButton.textContent = '已重刷';
+    document.querySelectorAll(`.${EXT_ID}-refresh-button`).forEach(button => {
+      button.textContent = '已重刷';
       setTimeout(() => {
-        refreshButton.textContent = '重刷';
+        button.textContent = '重刷';
       }, 900);
-    }
+    });
+  }, 80);
+}
+
+function resetReader() {
+  mode = 'medium';
+  focusMode = 'off';
+  colorMode = 'off';
+  layoutMode = 'auto';
+
+  localStorage.setItem(`${EXT_ID}-mode`, mode);
+  localStorage.setItem(`${EXT_ID}-focus`, focusMode);
+  localStorage.setItem(`${EXT_ID}-color`, colorMode);
+  localStorage.setItem(`${EXT_ID}-layout`, layoutMode);
+
+  restoreAllMessages();
+
+  setTimeout(() => {
+    applyState(true);
   }, 80);
 }
 
@@ -588,10 +606,15 @@ function findSettingsRoot() {
     '#extensions_settings2',
     '#extensions_container',
     '#extensionsMenu',
+    '#rm_extensions_block',
+    '#extensions_panel',
+    '#extensions',
     '.extensions_settings',
     '.extension_settings',
     '.drawer-content',
     '.drawer_content',
+    '.drawer-content-body',
+    '.inline-drawer-content',
   ];
 
   for (const selector of selectors) {
@@ -602,59 +625,106 @@ function findSettingsRoot() {
   return null;
 }
 
-function updateSettingsPanel() {
-  const modeButton = document.getElementById(`${EXT_ID}-mode-button`);
-  if (modeButton) modeButton.textContent = `模式：${MODE_LABELS[mode]}`;
-
-  const layoutButton = document.getElementById(`${EXT_ID}-layout-button`);
-  if (layoutButton) layoutButton.textContent = LAYOUT_LABELS[layoutMode];
-
-  const focusButton = document.getElementById(`${EXT_ID}-focus-button`);
-  if (focusButton) focusButton.textContent = FOCUS_LABELS[focusMode];
-
-  const colorButton = document.getElementById(`${EXT_ID}-color-button`);
-  if (colorButton) colorButton.textContent = COLOR_LABELS[colorMode];
-}
-
-function addSettingsPanel() {
-  if (document.getElementById(`${EXT_ID}-settings-panel`)) {
-    updateSettingsPanel();
-    return;
-  }
-
-  const root = findSettingsRoot();
-
-  if (!root) {
-    setTimeout(addSettingsPanel, 1000);
-    return;
-  }
-
+function createControlPanel(id, type = 'settings') {
   const wrapper = document.createElement('div');
-  wrapper.id = `${EXT_ID}-settings-panel`;
-  wrapper.className = 'adhd-reader-settings-panel';
+  wrapper.id = id;
+  wrapper.className = type === 'fallback'
+    ? 'adhd-reader-fallback-bar'
+    : 'adhd-reader-settings-panel';
   wrapper.dataset.adhdSkip = 'true';
 
   wrapper.innerHTML = `
     <div class="adhd-reader-settings-title">ADHD Reader</div>
     <div class="adhd-reader-settings-desc">仿生阅读、自动排版、聚焦线与轻量高亮。</div>
     <div class="adhd-reader-settings-buttons">
-      <button type="button" id="${EXT_ID}-mode-button">模式</button>
-      <button type="button" id="${EXT_ID}-layout-button">排版</button>
-      <button type="button" id="${EXT_ID}-focus-button">聚焦</button>
-      <button type="button" id="${EXT_ID}-color-button">彩色</button>
-      <button type="button" id="${EXT_ID}-refresh-button">重刷</button>
+      <button type="button" class="${EXT_ID}-mode-button">模式</button>
+      <button type="button" class="${EXT_ID}-layout-button">排版</button>
+      <button type="button" class="${EXT_ID}-focus-button">聚焦</button>
+      <button type="button" class="${EXT_ID}-color-button">彩色</button>
+      <button type="button" class="${EXT_ID}-refresh-button">重刷</button>
+      <button type="button" class="${EXT_ID}-reset-button">重置</button>
     </div>
   `;
 
-  root.prepend(wrapper);
+  wrapper.querySelector(`.${EXT_ID}-mode-button`)?.addEventListener('click', cycleMode);
+  wrapper.querySelector(`.${EXT_ID}-layout-button`)?.addEventListener('click', cycleLayout);
+  wrapper.querySelector(`.${EXT_ID}-focus-button`)?.addEventListener('click', cycleFocus);
+  wrapper.querySelector(`.${EXT_ID}-color-button`)?.addEventListener('click', cycleColor);
+  wrapper.querySelector(`.${EXT_ID}-refresh-button`)?.addEventListener('click', refreshReader);
+  wrapper.querySelector(`.${EXT_ID}-reset-button`)?.addEventListener('click', resetReader);
 
-  document.getElementById(`${EXT_ID}-mode-button`)?.addEventListener('click', cycleMode);
-  document.getElementById(`${EXT_ID}-layout-button`)?.addEventListener('click', cycleLayout);
-  document.getElementById(`${EXT_ID}-focus-button`)?.addEventListener('click', cycleFocus);
-  document.getElementById(`${EXT_ID}-color-button`)?.addEventListener('click', cycleColor);
-  document.getElementById(`${EXT_ID}-refresh-button`)?.addEventListener('click', refreshReader);
+  return wrapper;
+}
 
-  updateSettingsPanel();
+function updateAllControls() {
+  document.querySelectorAll(`.${EXT_ID}-mode-button`).forEach(button => {
+    button.textContent = `模式：${MODE_LABELS[mode]}`;
+  });
+
+  document.querySelectorAll(`.${EXT_ID}-layout-button`).forEach(button => {
+    button.textContent = LAYOUT_LABELS[layoutMode];
+  });
+
+  document.querySelectorAll(`.${EXT_ID}-focus-button`).forEach(button => {
+    button.textContent = FOCUS_LABELS[focusMode];
+  });
+
+  document.querySelectorAll(`.${EXT_ID}-color-button`).forEach(button => {
+    button.textContent = COLOR_LABELS[colorMode];
+  });
+}
+
+function ensureSettingsPanel() {
+  if (document.getElementById(`${EXT_ID}-settings-panel`)) {
+    updateAllControls();
+    return true;
+  }
+
+  const root = findSettingsRoot();
+
+  if (!root) return false;
+
+  const panel = createControlPanel(`${EXT_ID}-settings-panel`, 'settings');
+  root.prepend(panel);
+  updateAllControls();
+  return true;
+}
+
+function ensureFallbackBar() {
+  if (document.getElementById(`${EXT_ID}-fallback-bar`)) {
+    updateAllControls();
+    return;
+  }
+
+  const bar = createControlPanel(`${EXT_ID}-fallback-bar`, 'fallback');
+
+  const title = bar.querySelector('.adhd-reader-settings-title');
+  if (title) title.textContent = 'ADHD Reader 通用入口';
+
+  const desc = bar.querySelector('.adhd-reader-settings-desc');
+  if (desc) desc.textContent = '未找到扩展设置页，已启用兜底控制条。';
+
+  document.body.appendChild(bar);
+  fallbackVisible = true;
+  updateAllControls();
+}
+
+function mountControls() {
+  const mounted = ensureSettingsPanel();
+
+  if (mounted) {
+    const fallback = document.getElementById(`${EXT_ID}-fallback-bar`);
+    if (fallback) fallback.remove();
+    fallbackVisible = false;
+    return;
+  }
+
+  ensureFallbackBar();
+}
+
+function scheduleMountControls() {
+  clearTimeout(mountTimer);
+  mountTimer = setTimeout(mountControls, 300);
 }
 
 function addFocusRuler() {
@@ -697,23 +767,29 @@ function observeWholeApp() {
   if (observer) observer.disconnect();
 
   observer = new MutationObserver(mutations => {
-    if (!isEnabled() || processing) return;
-
     let shouldProcess = false;
+    let shouldMount = false;
 
     for (const mutation of mutations) {
       const target = mutation.target;
 
       if (target?.closest?.(`#${EXT_ID}-settings-panel`)) continue;
+      if (target?.closest?.(`#${EXT_ID}-fallback-bar`)) continue;
       if (target?.id === `${EXT_ID}-ruler`) continue;
 
-      if (mutation.type === 'childList' || mutation.type === 'characterData') {
+      if (mutation.type === 'childList') {
+        shouldMount = true;
         shouldProcess = true;
-        break;
+      }
+
+      if (mutation.type === 'characterData') {
+        shouldProcess = true;
       }
     }
 
-    if (shouldProcess) {
+    if (shouldMount) scheduleMountControls();
+
+    if (shouldProcess && isEnabled() && !processing) {
       scheduleProcess(false);
     }
   });
@@ -726,18 +802,19 @@ function observeWholeApp() {
 }
 
 function init() {
-  addSettingsPanel();
+  mountControls();
   addFocusRuler();
   observeWholeApp();
   applyState(true);
+
+  setTimeout(mountControls, 800);
+  setTimeout(mountControls, 1800);
+  setTimeout(mountControls, 3500);
 }
 
 window.ADHDReaderRefresh = refreshReader;
-
-window.ADHDReaderReset = function () {
-  restoreAllMessages();
-  setTimeout(() => applyState(true), 100);
-};
+window.ADHDReaderReset = resetReader;
+window.ADHDReaderMount = mountControls;
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
@@ -746,6 +823,5 @@ if (document.readyState === 'loading') {
 }
 
 setTimeout(init, 800);
-setTimeout(addSettingsPanel, 1500);
 setTimeout(() => applyState(true), 1800);
 setTimeout(() => applyState(true), 3500);
