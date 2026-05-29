@@ -44,7 +44,6 @@ let observer = null;
 let processing = false;
 let pendingTimer = null;
 let mountTimer = null;
-let fallbackVisible = false;
 
 const SKIP_TAGS = new Set([
   'SCRIPT',
@@ -72,6 +71,14 @@ function isEnabled() {
   return mode !== 'off';
 }
 
+function isCJKChar(char) {
+  return /[\u3400-\u9fff]/.test(char);
+}
+
+function isLatinChar(char) {
+  return /[A-Za-z0-9'-]/.test(char);
+}
+
 function isWhitespaceOrPunctuation(text) {
   return /^[\s。，、！？；：,.!?;:()[\]{}《》“”‘’"'—…·\-]+$/.test(text);
 }
@@ -94,21 +101,108 @@ function countLatin(text) {
   return match ? match.length : 0;
 }
 
+/**
+ * 中文 fallback 分词器：
+ * 目的不是做真正 NLP 分词，而是给仿生阅读提供稳定的短词视觉锚点。
+ * 这样 iPad / 平板 / WebView 即使没有可靠 Intl.Segmenter，也能处理中文。
+ */
+function splitChineseBuffer(text) {
+  const result = [];
+  let i = 0;
+
+  while (i < text.length) {
+    const remain = text.length - i;
+
+    if (remain >= 6) {
+      result.push(text.slice(i, i + 3));
+      i += 3;
+    } else if (remain >= 4) {
+      result.push(text.slice(i, i + 2));
+      i += 2;
+    } else if (remain === 3) {
+      result.push(text.slice(i, i + 2));
+      result.push(text.slice(i + 2));
+      i += 3;
+    } else {
+      result.push(text.slice(i));
+      break;
+    }
+  }
+
+  return result;
+}
+
+function fallbackSegmentText(text) {
+  const result = [];
+  let buffer = '';
+  let bufferType = '';
+
+  function flushBuffer() {
+    if (!buffer) return;
+
+    if (bufferType === 'cjk') {
+      result.push(...splitChineseBuffer(buffer));
+    } else if (bufferType === 'latin') {
+      result.push(...buffer.split(/(\s+)/g).filter(Boolean));
+    } else {
+      result.push(buffer);
+    }
+
+    buffer = '';
+    bufferType = '';
+  }
+
+  for (const char of text) {
+    if (isCJKChar(char)) {
+      if (bufferType && bufferType !== 'cjk') flushBuffer();
+      buffer += char;
+      bufferType = 'cjk';
+      continue;
+    }
+
+    if (isLatinChar(char)) {
+      if (bufferType && bufferType !== 'latin') flushBuffer();
+      buffer += char;
+      bufferType = 'latin';
+      continue;
+    }
+
+    flushBuffer();
+    result.push(char);
+  }
+
+  flushBuffer();
+
+  return result.filter(Boolean);
+}
+
 function segmentText(text) {
   if (!text.trim()) return [text];
 
   try {
     if (window.Intl && Intl.Segmenter) {
       const segmenter = new Intl.Segmenter('zh-Hans', { granularity: 'word' });
-      return Array.from(segmenter.segment(text)).map(item => item.segment);
+      const segmented = Array.from(segmenter.segment(text)).map(item => item.segment);
+
+      const hasChinese = /[\u3400-\u9fff]/.test(text);
+      const hasLongChineseChunk = segmented.some(part => {
+        return /^[\u3400-\u9fff]+$/.test(part) && part.length >= 7;
+      });
+
+      const tooFewSegments =
+        hasChinese &&
+        text.length >= 12 &&
+        segmented.filter(part => part.trim()).length <= 2;
+
+      if (!hasLongChineseChunk && !tooFewSegments) {
+        return segmented;
+      }
     }
   } catch (error) {
-    console.warn('[ADHD Reader] Segmenter failed:', error);
+    console.warn('[ADHD Reader] Intl.Segmenter failed, using fallback:', error);
   }
 
-  return text
-    .split(/(\s+|[。，、！？；：,.!?;:()[\]{}《》“”‘’"'—…·\-])/g)
-    .filter(Boolean);
+  return fallbackSegmentText(text);
 }
 
 function getBoldLength(token) {
@@ -705,7 +799,6 @@ function ensureFallbackBar() {
   if (desc) desc.textContent = '未找到扩展设置页，已启用兜底控制条。';
 
   document.body.appendChild(bar);
-  fallbackVisible = true;
   updateAllControls();
 }
 
@@ -715,7 +808,6 @@ function mountControls() {
   if (mounted) {
     const fallback = document.getElementById(`${EXT_ID}-fallback-bar`);
     if (fallback) fallback.remove();
-    fallbackVisible = false;
     return;
   }
 
