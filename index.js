@@ -1,9 +1,21 @@
 const EXT_ID = 'adhd-reader';
 
-let enabled = localStorage.getItem(`${EXT_ID}-enabled`) !== 'false';
+const MODES = ['off', 'light', 'medium', 'strong'];
+const MODE_LABELS = {
+  off: 'ADHD OFF',
+  light: 'ADHD 轻',
+  medium: 'ADHD 中',
+  strong: 'ADHD 强',
+};
+
+let mode = localStorage.getItem(`${EXT_ID}-mode`) || 'medium';
+if (!MODES.includes(mode)) mode = 'medium';
+
 let observer = null;
 let processing = false;
 let pendingTimer = null;
+let pressTimer = null;
+let longPressed = false;
 
 const SKIP_TAGS = new Set([
   'SCRIPT',
@@ -15,7 +27,21 @@ const SKIP_TAGS = new Set([
   'PRE',
   'KBD',
   'SAMP',
+  'TABLE',
+  'THEAD',
+  'TBODY',
+  'TR',
+  'TD',
+  'TH',
+  'DETAILS',
+  'SUMMARY',
+  'SELECT',
+  'OPTION',
 ]);
+
+function isEnabled() {
+  return mode !== 'off';
+}
 
 function isWhitespaceOrPunctuation(text) {
   return /^[\s。，、！？；：,.!?;:()[\]{}《》“”‘’"'—…·\-]+$/.test(text);
@@ -27,6 +53,16 @@ function isEnglishWord(token) {
 
 function hasCJK(token) {
   return /[\u3400-\u9fff]/.test(token);
+}
+
+function countCJK(text) {
+  const match = text.match(/[\u3400-\u9fff]/g);
+  return match ? match.length : 0;
+}
+
+function countLatin(text) {
+  const match = text.match(/[A-Za-z]/g);
+  return match ? match.length : 0;
 }
 
 function segmentText(text) {
@@ -48,19 +84,46 @@ function segmentText(text) {
 
 function getBoldLength(token) {
   const len = token.length;
-
   if (len <= 1) return 0;
 
   if (isEnglishWord(token)) {
-    if (len <= 3) return 1;
-    if (len <= 5) return 2;
-    return Math.ceil(len * 0.42);
+    if (mode === 'light') {
+      if (len <= 4) return 0;
+      if (len <= 6) return 2;
+      return Math.ceil(len * 0.35);
+    }
+
+    if (mode === 'medium') {
+      if (len <= 3) return 1;
+      if (len <= 5) return 2;
+      return Math.ceil(len * 0.42);
+    }
+
+    if (mode === 'strong') {
+      if (len <= 3) return 1;
+      if (len <= 5) return 2;
+      return Math.ceil(len * 0.5);
+    }
   }
 
   if (hasCJK(token)) {
-    if (len <= 2) return 1;
-    if (len <= 4) return 1;
-    return 2;
+    if (mode === 'light') {
+      if (len <= 3) return 0;
+      if (len <= 5) return 1;
+      return 1;
+    }
+
+    if (mode === 'medium') {
+      if (len <= 2) return 0;
+      if (len <= 4) return 1;
+      return 2;
+    }
+
+    if (mode === 'strong') {
+      if (len <= 2) return 0;
+      if (len <= 4) return 1;
+      return 2;
+    }
   }
 
   return 0;
@@ -113,6 +176,7 @@ function shouldSkipTextNode(node) {
     if (SKIP_TAGS.has(current.tagName)) return true;
     if (current.classList?.contains('adhd-token')) return true;
     if (current.id === `${EXT_ID}-floating-toggle`) return true;
+    if (current.closest?.('[data-adhd-skip="true"]')) return true;
     current = current.parentElement;
   }
 
@@ -123,18 +187,49 @@ function getCleanSignature(element) {
   return (element.innerText || '')
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 500);
+    .slice(0, 700);
 }
 
 function removeReaderMarkup(element) {
   const tokens = element.querySelectorAll('.adhd-token');
 
   tokens.forEach(token => {
-    const text = document.createTextNode(token.innerText);
-    token.replaceWith(text);
+    token.replaceWith(document.createTextNode(token.innerText));
   });
 
   element.normalize();
+}
+
+function getLineHeightForText(text) {
+  const length = text.length;
+  const cjk = countCJK(text);
+  const latin = countLatin(text);
+  const total = cjk + latin || 1;
+  const cjkRatio = cjk / total;
+  const width = window.innerWidth || 390;
+
+  let lineHeight;
+
+  if (cjkRatio > 0.55) {
+    lineHeight = length > 500 ? 1.82 : 1.74;
+  } else if (cjkRatio < 0.25) {
+    lineHeight = length > 500 ? 1.68 : 1.58;
+  } else {
+    lineHeight = length > 500 ? 1.76 : 1.66;
+  }
+
+  if (width < 430) lineHeight += 0.04;
+  if (width > 760) lineHeight -= 0.04;
+
+  if (mode === 'light') lineHeight -= 0.03;
+  if (mode === 'strong') lineHeight += 0.03;
+
+  return Math.max(1.52, Math.min(1.9, lineHeight)).toFixed(2);
+}
+
+function applyAutoSpacing(element, text) {
+  const lineHeight = getLineHeightForText(text);
+  element.style.setProperty('--adhd-line-height', lineHeight);
 }
 
 function processElement(element, force = false) {
@@ -145,21 +240,23 @@ function processElement(element, force = false) {
 
   const alreadyDone = element.dataset.adhdReaderDone === '1';
   const oldSignature = element.dataset.adhdReaderSignature || '';
+  const oldMode = element.dataset.adhdReaderMode || '';
   const hasMarkup = Boolean(element.querySelector('.adhd-token'));
 
-  // 角色/聊天切换后，酒馆可能复用 DOM：
-  // dataset 还在，但正文已经变了，所以必须重置。
-  if (alreadyDone && (currentSignature !== oldSignature || !hasMarkup)) {
-    delete element.dataset.adhdReaderDone;
-    delete element.dataset.adhdReaderSignature;
-    delete element.dataset.adhdOriginalHtml;
-    removeReaderMarkup(element);
+  if (
+    alreadyDone &&
+    (currentSignature !== oldSignature || oldMode !== mode || !hasMarkup)
+  ) {
+    restoreElement(element);
   }
 
-  if (!force && element.dataset.adhdReaderDone === '1') return;
+  if (!force && element.dataset.adhdReaderDone === '1') {
+    applyAutoSpacing(element, currentSignature);
+    return;
+  }
 
-  // 保存当前原始 HTML。注意：这里保存的是“当前角色/当前消息”的原文。
   element.dataset.adhdOriginalHtml = element.innerHTML;
+  element.dataset.adhdReaderMode = mode;
 
   const walker = document.createTreeWalker(
     element,
@@ -174,7 +271,6 @@ function processElement(element, force = false) {
   );
 
   const textNodes = [];
-
   while (walker.nextNode()) {
     textNodes.push(walker.currentNode);
   }
@@ -186,7 +282,10 @@ function processElement(element, force = false) {
 
   element.dataset.adhdReaderDone = '1';
   element.dataset.adhdReaderSignature = getCleanSignature(element);
+  element.dataset.adhdReaderMode = mode;
   element.classList.add('adhd-reader-active-text');
+
+  applyAutoSpacing(element, currentSignature);
 }
 
 function restoreElement(element) {
@@ -203,16 +302,36 @@ function restoreElement(element) {
   delete element.dataset.adhdOriginalHtml;
   delete element.dataset.adhdReaderDone;
   delete element.dataset.adhdReaderSignature;
+  delete element.dataset.adhdReaderMode;
+
   element.classList.remove('adhd-reader-active-text');
+  element.style.removeProperty('--adhd-line-height');
+}
+
+function getTargetMessages() {
+  const all = Array.from(document.querySelectorAll('.mes_text'));
+
+  return all.filter(element => {
+    const message = element.closest('.mes');
+
+    if (!message) return true;
+
+    const isUser =
+      message.classList.contains('user_mes') ||
+      message.getAttribute('is_user') === 'true' ||
+      message.dataset?.isUser === 'true';
+
+    return !isUser;
+  });
 }
 
 function processAllMessages(force = false) {
-  if (processing) return;
+  if (processing || !isEnabled()) return;
 
   processing = true;
 
   try {
-    document.querySelectorAll('.mes_text').forEach(element => {
+    getTargetMessages().forEach(element => {
       processElement(element, force);
     });
   } finally {
@@ -233,7 +352,7 @@ function restoreAllMessages() {
 }
 
 function scheduleProcess(force = false) {
-  if (!enabled) return;
+  if (!isEnabled()) return;
 
   clearTimeout(pendingTimer);
 
@@ -242,20 +361,66 @@ function scheduleProcess(force = false) {
   }, 180);
 }
 
-function applyState(force = false) {
-  document.body.classList.toggle('adhd-reader-enabled', enabled);
+function updateBodyModeClass() {
+  document.body.classList.remove(
+    'adhd-reader-mode-off',
+    'adhd-reader-mode-light',
+    'adhd-reader-mode-medium',
+    'adhd-reader-mode-strong'
+  );
 
+  document.body.classList.add(`adhd-reader-mode-${mode}`);
+  document.body.classList.toggle('adhd-reader-enabled', isEnabled());
+}
+
+function updateButton() {
   const button = document.getElementById(`${EXT_ID}-floating-toggle`);
-  if (button) {
-    button.textContent = enabled ? 'ADHD ON' : 'ADHD OFF';
-    button.classList.toggle('adhd-reader-button-on', enabled);
-  }
+  if (!button) return;
 
-  if (enabled) {
+  button.textContent = MODE_LABELS[mode] || 'ADHD';
+  button.classList.toggle('adhd-reader-button-on', isEnabled());
+  button.dataset.mode = mode;
+}
+
+function applyState(force = false) {
+  updateBodyModeClass();
+  updateButton();
+
+  if (isEnabled()) {
     processAllMessages(force);
   } else {
     restoreAllMessages();
   }
+}
+
+function cycleMode() {
+  const currentIndex = MODES.indexOf(mode);
+  mode = MODES[(currentIndex + 1) % MODES.length];
+
+  localStorage.setItem(`${EXT_ID}-mode`, mode);
+
+  restoreAllMessages();
+
+  setTimeout(() => {
+    applyState(true);
+  }, 60);
+}
+
+function refreshReader() {
+  const button = document.getElementById(`${EXT_ID}-floating-toggle`);
+
+  restoreAllMessages();
+
+  setTimeout(() => {
+    applyState(true);
+    if (button) {
+      const oldText = button.textContent;
+      button.textContent = '已重刷';
+      setTimeout(() => {
+        updateButton();
+      }, 800);
+    }
+  }, 80);
 }
 
 function addFloatingButton() {
@@ -266,36 +431,46 @@ function addFloatingButton() {
     button.id = `${EXT_ID}-floating-toggle`;
     button.type = 'button';
 
-    button.addEventListener('click', () => {
-      enabled = !enabled;
-      localStorage.setItem(`${EXT_ID}-enabled`, String(enabled));
+    button.addEventListener('pointerdown', () => {
+      longPressed = false;
+      clearTimeout(pressTimer);
 
-      // 点按钮时强制刷新，防止后台换角色后状态不同步。
-      applyState(true);
+      pressTimer = setTimeout(() => {
+        longPressed = true;
+        refreshReader();
+      }, 650);
+    });
+
+    button.addEventListener('pointerup', () => {
+      clearTimeout(pressTimer);
+
+      if (!longPressed) {
+        cycleMode();
+      }
+    });
+
+    button.addEventListener('pointerleave', () => {
+      clearTimeout(pressTimer);
     });
 
     document.body.appendChild(button);
   }
 
-  button.textContent = enabled ? 'ADHD ON' : 'ADHD OFF';
-  button.classList.toggle('adhd-reader-button-on', enabled);
+  updateButton();
 }
 
 function observeWholeApp() {
   if (observer) observer.disconnect();
 
   observer = new MutationObserver(mutations => {
-    if (!enabled || processing) return;
+    if (!isEnabled() || processing) return;
 
     let shouldProcess = false;
 
     for (const mutation of mutations) {
-      if (mutation.type === 'childList') {
-        shouldProcess = true;
-        break;
-      }
+      if (mutation.target?.id === `${EXT_ID}-floating-toggle`) continue;
 
-      if (mutation.type === 'characterData') {
+      if (mutation.type === 'childList' || mutation.type === 'characterData') {
         shouldProcess = true;
         break;
       }
@@ -306,7 +481,6 @@ function observeWholeApp() {
     }
   });
 
-  // 不只监听 #chat，因为 TauriTavern 切换角色时可能整个聊天区域被替换。
   observer.observe(document.body, {
     childList: true,
     subtree: true,
@@ -320,11 +494,7 @@ function init() {
   applyState(true);
 }
 
-// 暴露一个调试入口，万一卡住可以在控制台调用。
-// 手机端一般用不到，但留着不影响。
-window.ADHDReaderRefresh = function () {
-  applyState(true);
-};
+window.ADHDReaderRefresh = refreshReader;
 
 window.ADHDReaderReset = function () {
   restoreAllMessages();
