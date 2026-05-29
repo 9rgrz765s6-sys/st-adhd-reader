@@ -61,6 +61,7 @@ body.adhd-reader-color-soft .adhd-semantic-scene .adhd-bold {
   color: rgba(130, 205, 255, 1);
 }
 
+/* 扩展设置页控制面板 */
 .adhd-reader-settings-panel {
   margin: 10px 0;
   padding: 12px;
@@ -97,6 +98,49 @@ body.adhd-reader-color-soft .adhd-semantic-scene .adhd-bold {
   font-weight: 700;
 }
 
+/* 通用兜底控制条：只有找不到扩展设置页时才出现 */
+.adhd-reader-fallback-bar {
+  position: fixed;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  z-index: 999998;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(20, 20, 20, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(8px);
+  color: white;
+}
+
+.adhd-reader-fallback-bar .adhd-reader-settings-title {
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.adhd-reader-fallback-bar .adhd-reader-settings-desc {
+  font-size: 11px;
+  opacity: 0.72;
+  margin-bottom: 8px;
+}
+
+.adhd-reader-fallback-bar .adhd-reader-settings-buttons {
+  display: flex;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  gap: 6px;
+  padding-bottom: 2px;
+}
+
+.adhd-reader-fallback-bar .adhd-reader-settings-buttons button {
+  white-space: nowrap;
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  font-size: 11px;
+}
+
+/* 聚焦线 */
 #adhd-reader-ruler {
   position: fixed;
   left: 0;
