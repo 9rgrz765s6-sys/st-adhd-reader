@@ -8,8 +8,27 @@ const MODE_LABELS = {
   strong: 'ADHD 强',
 };
 
+const FOCUS_MODES = ['off', 'soft', 'strong'];
+const FOCUS_LABELS = {
+  off: '聚焦：关',
+  soft: '聚焦：柔',
+  strong: '聚焦：强',
+};
+
+const COLOR_MODES = ['off', 'soft'];
+const COLOR_LABELS = {
+  off: '彩色：关',
+  soft: '彩色：柔',
+};
+
 let mode = localStorage.getItem(`${EXT_ID}-mode`) || 'medium';
 if (!MODES.includes(mode)) mode = 'medium';
+
+let focusMode = localStorage.getItem(`${EXT_ID}-focus`) || 'off';
+if (!FOCUS_MODES.includes(focusMode)) focusMode = 'off';
+
+let colorMode = localStorage.getItem(`${EXT_ID}-color`) || 'off';
+if (!COLOR_MODES.includes(colorMode)) colorMode = 'off';
 
 let observer = null;
 let processing = false;
@@ -86,7 +105,6 @@ function getBoldLength(token) {
   const len = token.length;
   if (len <= 1) return 0;
 
-  // 英文：保持上一版效果
   if (isEnglishWord(token)) {
     if (mode === 'light') {
       if (len <= 4) return 0;
@@ -107,7 +125,6 @@ function getBoldLength(token) {
     }
   }
 
-  // 中文：增强版，但避免单字满屏斑点
   if (hasCJK(token)) {
     if (mode === 'light') {
       if (len <= 1) return 0;
@@ -133,6 +150,22 @@ function getBoldLength(token) {
   return 0;
 }
 
+function getSemanticClass(token) {
+  if (/爱|喜欢|恨|哭|笑|心|梦|怕|痛|温柔|孤独|命运|希望|绝望|愤怒|难过|快乐|悲伤|焦虑|安心|害怕|幸福|沉默/.test(token)) {
+    return 'adhd-semantic-emotion';
+  }
+
+  if (/说|问|看|走|跑|伸|握|抱|吻|低头|抬眼|靠近|离开|推开|转身|停下|颤抖|呼吸|触碰|凝视/.test(token)) {
+    return 'adhd-semantic-action';
+  }
+
+  if (/夜|雨|雪|风|光|影|门|窗|房间|街|天空|神殿|世界|声音|颜色|镜头|阳光|黑暗|森林|城市|海|月/.test(token)) {
+    return 'adhd-semantic-scene';
+  }
+
+  return '';
+}
+
 function createReadableFragment(text) {
   const fragment = document.createDocumentFragment();
   const tokens = segmentText(text);
@@ -153,7 +186,8 @@ function createReadableFragment(text) {
     }
 
     const wrapper = document.createElement('span');
-    wrapper.className = 'adhd-token';
+    const semanticClass = getSemanticClass(token);
+    wrapper.className = semanticClass ? `adhd-token ${semanticClass}` : 'adhd-token';
 
     const bold = document.createElement('span');
     bold.className = 'adhd-bold';
@@ -179,7 +213,9 @@ function shouldSkipTextNode(node) {
   while (current) {
     if (SKIP_TAGS.has(current.tagName)) return true;
     if (current.classList?.contains('adhd-token')) return true;
-    if (current.id === `${EXT_ID}-floating-toggle`) return true;
+    if (current.closest?.(`#${EXT_ID}-floating-toggle`)) return true;
+    if (current.closest?.(`#${EXT_ID}-panel`)) return true;
+    if (current.closest?.(`#${EXT_ID}-ruler`)) return true;
     if (current.closest?.('[data-adhd-skip="true"]')) return true;
     current = current.parentElement;
   }
@@ -365,15 +401,22 @@ function scheduleProcess(force = false) {
   }, 180);
 }
 
-function updateBodyModeClass() {
+function updateBodyClasses() {
   document.body.classList.remove(
     'adhd-reader-mode-off',
     'adhd-reader-mode-light',
     'adhd-reader-mode-medium',
-    'adhd-reader-mode-strong'
+    'adhd-reader-mode-strong',
+    'adhd-reader-focus-off',
+    'adhd-reader-focus-soft',
+    'adhd-reader-focus-strong',
+    'adhd-reader-color-off',
+    'adhd-reader-color-soft'
   );
 
   document.body.classList.add(`adhd-reader-mode-${mode}`);
+  document.body.classList.add(`adhd-reader-focus-${focusMode}`);
+  document.body.classList.add(`adhd-reader-color-${colorMode}`);
   document.body.classList.toggle('adhd-reader-enabled', isEnabled());
 }
 
@@ -387,8 +430,9 @@ function updateButton() {
 }
 
 function applyState(force = false) {
-  updateBodyModeClass();
+  updateBodyClasses();
   updateButton();
+  updatePanel();
 
   if (isEnabled()) {
     processAllMessages(force);
@@ -410,6 +454,22 @@ function cycleMode() {
   }, 60);
 }
 
+function cycleFocus() {
+  const currentIndex = FOCUS_MODES.indexOf(focusMode);
+  focusMode = FOCUS_MODES[(currentIndex + 1) % FOCUS_MODES.length];
+
+  localStorage.setItem(`${EXT_ID}-focus`, focusMode);
+  applyState(false);
+}
+
+function cycleColor() {
+  const currentIndex = COLOR_MODES.indexOf(colorMode);
+  colorMode = COLOR_MODES[(currentIndex + 1) % COLOR_MODES.length];
+
+  localStorage.setItem(`${EXT_ID}-color`, colorMode);
+  applyState(false);
+}
+
 function refreshReader() {
   const button = document.getElementById(`${EXT_ID}-floating-toggle`);
 
@@ -426,6 +486,28 @@ function refreshReader() {
   }, 80);
 }
 
+function togglePanel() {
+  const panel = document.getElementById(`${EXT_ID}-panel`);
+  if (!panel) return;
+
+  panel.classList.toggle('adhd-reader-panel-open');
+}
+
+function closePanel() {
+  const panel = document.getElementById(`${EXT_ID}-panel`);
+  if (!panel) return;
+
+  panel.classList.remove('adhd-reader-panel-open');
+}
+
+function updatePanel() {
+  const focusButton = document.getElementById(`${EXT_ID}-focus-button`);
+  if (focusButton) focusButton.textContent = FOCUS_LABELS[focusMode];
+
+  const colorButton = document.getElementById(`${EXT_ID}-color-button`);
+  if (colorButton) colorButton.textContent = COLOR_LABELS[colorMode];
+}
+
 function addFloatingButton() {
   let button = document.getElementById(`${EXT_ID}-floating-toggle`);
 
@@ -433,6 +515,7 @@ function addFloatingButton() {
     button = document.createElement('button');
     button.id = `${EXT_ID}-floating-toggle`;
     button.type = 'button';
+    button.dataset.adhdSkip = 'true';
 
     button.addEventListener('pointerdown', () => {
       longPressed = false;
@@ -440,7 +523,7 @@ function addFloatingButton() {
 
       pressTimer = setTimeout(() => {
         longPressed = true;
-        refreshReader();
+        togglePanel();
       }, 650);
     });
 
@@ -462,6 +545,64 @@ function addFloatingButton() {
   updateButton();
 }
 
+function addPanel() {
+  if (document.getElementById(`${EXT_ID}-panel`)) return;
+
+  const panel = document.createElement('div');
+  panel.id = `${EXT_ID}-panel`;
+  panel.dataset.adhdSkip = 'true';
+
+  panel.innerHTML = `
+    <button type="button" id="${EXT_ID}-refresh-button">重刷</button>
+    <button type="button" id="${EXT_ID}-focus-button">${FOCUS_LABELS[focusMode]}</button>
+    <button type="button" id="${EXT_ID}-color-button">${COLOR_LABELS[colorMode]}</button>
+    <button type="button" id="${EXT_ID}-close-button">关闭</button>
+  `;
+
+  document.body.appendChild(panel);
+
+  document.getElementById(`${EXT_ID}-refresh-button`)?.addEventListener('click', refreshReader);
+  document.getElementById(`${EXT_ID}-focus-button`)?.addEventListener('click', cycleFocus);
+  document.getElementById(`${EXT_ID}-color-button`)?.addEventListener('click', cycleColor);
+  document.getElementById(`${EXT_ID}-close-button`)?.addEventListener('click', closePanel);
+}
+
+function addFocusRuler() {
+  if (document.getElementById(`${EXT_ID}-ruler`)) return;
+
+  const ruler = document.createElement('div');
+  ruler.id = `${EXT_ID}-ruler`;
+  ruler.dataset.adhdSkip = 'true';
+  document.body.appendChild(ruler);
+
+  const moveRuler = clientY => {
+    if (!isEnabled()) return;
+    if (focusMode === 'off') return;
+
+    ruler.style.top = `${clientY - 18}px`;
+    ruler.classList.add('adhd-reader-ruler-visible');
+
+    clearTimeout(ruler._hideTimer);
+    ruler._hideTimer = setTimeout(() => {
+      ruler.classList.remove('adhd-reader-ruler-visible');
+    }, 1400);
+  };
+
+  document.addEventListener('mousemove', event => {
+    moveRuler(event.clientY);
+  });
+
+  document.addEventListener(
+    'touchmove',
+    event => {
+      if (event.touches && event.touches[0]) {
+        moveRuler(event.touches[0].clientY);
+      }
+    },
+    { passive: true }
+  );
+}
+
 function observeWholeApp() {
   if (observer) observer.disconnect();
 
@@ -471,7 +612,11 @@ function observeWholeApp() {
     let shouldProcess = false;
 
     for (const mutation of mutations) {
-      if (mutation.target?.id === `${EXT_ID}-floating-toggle`) continue;
+      const target = mutation.target;
+
+      if (target?.closest?.(`#${EXT_ID}-panel`)) continue;
+      if (target?.id === `${EXT_ID}-floating-toggle`) continue;
+      if (target?.id === `${EXT_ID}-ruler`) continue;
 
       if (mutation.type === 'childList' || mutation.type === 'characterData') {
         shouldProcess = true;
@@ -493,6 +638,8 @@ function observeWholeApp() {
 
 function init() {
   addFloatingButton();
+  addPanel();
+  addFocusRuler();
   observeWholeApp();
   applyState(true);
 }
