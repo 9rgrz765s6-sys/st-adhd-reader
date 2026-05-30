@@ -1,16 +1,32 @@
 const EXT_ID = 'adhd-reader';
 
 const MODES = ['off', 'light', 'medium', 'strong'];
-const MODE_LABELS = { off: 'OFF', light: '轻', medium: '中', strong: '强' };
+const MODE_LABELS = {
+  off: 'OFF',
+  light: '轻',
+  medium: '中',
+  strong: '强',
+};
 
 const FOCUS_MODES = ['off', 'soft', 'strong'];
-const FOCUS_LABELS = { off: '聚焦：关', soft: '聚焦：柔', strong: '聚焦：强' };
+const FOCUS_LABELS = {
+  off: '聚焦：关',
+  soft: '聚焦：柔',
+  strong: '聚焦：强',
+};
 
 const COLOR_MODES = ['off', 'soft'];
-const COLOR_LABELS = { off: '彩色：关', soft: '彩色：柔' };
+const COLOR_LABELS = {
+  off: '彩色：关',
+  soft: '彩色：柔',
+};
 
 const LAYOUT_MODES = ['auto', 'compact', 'comfort'];
-const LAYOUT_LABELS = { auto: '排版：自动', compact: '排版：紧凑', comfort: '排版：舒展' };
+const LAYOUT_LABELS = {
+  auto: '排版：自动',
+  compact: '排版：紧凑',
+  comfort: '排版：舒展',
+};
 
 let mode = localStorage.getItem(`${EXT_ID}-mode`) || 'medium';
 if (!MODES.includes(mode)) mode = 'medium';
@@ -28,12 +44,28 @@ let observer = null;
 let processing = false;
 let pendingTimer = null;
 let mountTimer = null;
+let typographyTimer = null;
 
 const SKIP_TAGS = new Set([
-  'SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'BUTTON',
-  'CODE', 'PRE', 'KBD', 'SAMP',
-  'TABLE', 'THEAD', 'TBODY', 'TR', 'TD', 'TH',
-  'DETAILS', 'SUMMARY', 'SELECT', 'OPTION',
+  'SCRIPT',
+  'STYLE',
+  'TEXTAREA',
+  'INPUT',
+  'BUTTON',
+  'CODE',
+  'PRE',
+  'KBD',
+  'SAMP',
+  'TABLE',
+  'THEAD',
+  'TBODY',
+  'TR',
+  'TD',
+  'TH',
+  'DETAILS',
+  'SUMMARY',
+  'SELECT',
+  'OPTION',
 ]);
 
 function isEnabled() {
@@ -136,6 +168,7 @@ function fallbackSegmentText(text) {
   }
 
   flushBuffer();
+
   return result.filter(Boolean);
 }
 
@@ -237,17 +270,23 @@ function getSemanticClass(token) {
   if (
     /爱|喜欢|恨|哭|笑|心|梦|怕|痛|温柔|孤独|命运|希望|绝望|愤怒|难过|快乐|悲伤|焦虑|安心|害怕|幸福|沉默|担心|怜悯|关心|安慰/.test(token) ||
     /love|like|hate|cry|smile|heart|dream|fear|pain|gentle|lonely|fate|hope|despair|angry|sad|anxious|safe|happy|silence|worried|worry|comfort|compassion|concern|caring|afraid|relief|tender|sorrow|grief/.test(lower)
-  ) return 'adhd-semantic-emotion';
+  ) {
+    return 'adhd-semantic-emotion';
+  }
 
   if (
     /说|问|看|走|跑|伸|握|抱|吻|低头|抬眼|靠近|离开|推开|转身|停下|颤抖|呼吸|触碰|凝视|醒来|治愈|恢复|寻找|握住|扶起/.test(token) ||
     /say|said|ask|asked|look|walk|run|reach|hold|hug|kiss|breathe|touch|stare|shiver|leave|turn|stop|wake|heal|find|search|clasp|restore|move|step|lean|whisper|watch|open|close/.test(lower)
-  ) return 'adhd-semantic-action';
+  ) {
+    return 'adhd-semantic-action';
+  }
 
   if (
     /夜|雨|雪|风|光|影|门|窗|房间|街|天空|神殿|世界|声音|颜色|镜头|阳光|黑暗|森林|城市|海|月|冬日|夏天|空气|屏幕/.test(token) ||
     /night|rain|snow|wind|light|shadow|door|window|room|street|sky|forest|city|sea|moon|sun|dark|world|voice|sound|glow|amber|magic|winter|summer|air|screen|garden|river/.test(lower)
-  ) return 'adhd-semantic-scene';
+  ) {
+    return 'adhd-semantic-scene';
+  }
 
   return '';
 }
@@ -372,7 +411,9 @@ function getTypographyForText(text) {
     maxWidth = '76ch';
   }
 
-  if (mode === 'light') lineHeight -= 0.02;
+  if (mode === 'light') {
+    lineHeight -= 0.02;
+  }
 
   if (mode === 'strong') {
     lineHeight += 0.03;
@@ -417,6 +458,15 @@ function applyAdaptiveTypography(element, text) {
   element.style.setProperty('--adhd-max-width', typography.maxWidth);
 }
 
+function markSeenTime(element, currentSignature) {
+  const oldSeenSignature = element.dataset.adhdSeenSignature || '';
+
+  if (oldSeenSignature !== currentSignature) {
+    element.dataset.adhdSeenSignature = currentSignature;
+    element.dataset.adhdSeenAt = String(Date.now());
+  }
+}
+
 function isMessageGenerating(element) {
   const message = element.closest('.mes');
   if (!message) return false;
@@ -426,32 +476,40 @@ function isMessageGenerating(element) {
   const hasStreamingClass =
     message.classList.contains('mes_being_generated') ||
     message.classList.contains('typing') ||
-    message.classList.contains('streaming') ||
-    message.classList.contains('last_mes');
+    message.classList.contains('streaming');
 
   const hasStopButton =
     document.querySelector('#mes_stop[style*="display: block"], #send_but[disabled], .fa-stop');
 
-  const tooFresh = Date.now() - Number(element.dataset.adhdSeenAt || Date.now()) < 900;
+  const seenAt = Number(element.dataset.adhdSeenAt || 0);
+  const tooFresh = seenAt > 0 && Date.now() - seenAt < 900;
 
   return (hasStreamingClass && hasStopButton) || tooFresh || text.endsWith('▌');
 }
 
-function markSeenTime(element) {
-  if (!element.dataset.adhdSeenAt) {
-    element.dataset.adhdSeenAt = String(Date.now());
-  }
+function safeResetElement(element) {
+  if (!element) return;
+
+  removeReaderMarkup(element);
+
+  delete element.dataset.adhdOriginalHtml;
+  delete element.dataset.adhdReaderDone;
+  delete element.dataset.adhdReaderSignature;
+  delete element.dataset.adhdReaderMode;
+  delete element.dataset.adhdReaderLayout;
+
+  element.classList.remove('adhd-reader-active-text');
 }
 
 function processElement(element, force = false) {
   if (!element) return;
 
-  markSeenTime(element);
-
   const currentSignature = getCleanSignature(element);
   if (!currentSignature) return;
 
-  if (!force && isMessageGenerating(element)) {
+  markSeenTime(element, currentSignature);
+
+  if (isMessageGenerating(element)) {
     scheduleProcess(true);
     return;
   }
@@ -491,7 +549,10 @@ function processElement(element, force = false) {
   );
 
   const textNodes = [];
-  while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+  while (walker.nextNode()) {
+    textNodes.push(walker.currentNode);
+  }
 
   for (const node of textNodes) {
     const fragment = createReadableFragment(node.nodeValue);
@@ -505,20 +566,6 @@ function processElement(element, force = false) {
   element.classList.add('adhd-reader-active-text');
 
   applyAdaptiveTypography(element, currentSignature);
-}
-
-function safeResetElement(element) {
-  if (!element) return;
-
-  removeReaderMarkup(element);
-
-  delete element.dataset.adhdOriginalHtml;
-  delete element.dataset.adhdReaderDone;
-  delete element.dataset.adhdReaderSignature;
-  delete element.dataset.adhdReaderMode;
-  delete element.dataset.adhdReaderLayout;
-
-  element.classList.remove('adhd-reader-active-text');
 }
 
 function restoreElement(element) {
@@ -538,6 +585,7 @@ function getTargetMessages() {
 
   return all.filter(element => {
     const message = element.closest('.mes');
+
     if (!message) return true;
 
     const isUser =
@@ -555,7 +603,9 @@ function processAllMessages(force = false) {
   processing = true;
 
   try {
-    getTargetMessages().forEach(element => processElement(element, force));
+    getTargetMessages().forEach(element => {
+      processElement(element, force);
+    });
   } finally {
     processing = false;
   }
@@ -573,11 +623,29 @@ function restoreAllMessages() {
   }
 }
 
+function updateTypographyOnly() {
+  if (!isEnabled()) return;
+
+  clearTimeout(typographyTimer);
+
+  typographyTimer = setTimeout(() => {
+    getTargetMessages().forEach(element => {
+      const text = getCleanSignature(element);
+      if (!text) return;
+
+      applyAdaptiveTypography(element, text);
+      element.dataset.adhdReaderLayout = layoutMode;
+    });
+  }, 80);
+}
+
 function scheduleProcess(force = false) {
   clearTimeout(pendingTimer);
 
   pendingTimer = setTimeout(() => {
-    if (isEnabled()) processAllMessages(force);
+    if (isEnabled()) {
+      processAllMessages(force);
+    }
   }, force ? 1100 : 450);
 }
 
@@ -608,8 +676,11 @@ function applyState(force = false) {
   updateBodyClasses();
   updateAllControls();
 
-  if (isEnabled()) processAllMessages(force);
-  else restoreAllMessages();
+  if (isEnabled()) {
+    processAllMessages(force);
+  } else {
+    restoreAllMessages();
+  }
 }
 
 function cycleMode() {
@@ -620,7 +691,9 @@ function cycleMode() {
 
   restoreAllMessages();
 
-  setTimeout(() => applyState(true), 60);
+  setTimeout(() => {
+    applyState(true);
+  }, 60);
 }
 
 function cycleFocus() {
@@ -628,7 +701,9 @@ function cycleFocus() {
   focusMode = FOCUS_MODES[(currentIndex + 1) % FOCUS_MODES.length];
 
   localStorage.setItem(`${EXT_ID}-focus`, focusMode);
-  applyState(false);
+
+  updateBodyClasses();
+  updateAllControls();
 }
 
 function cycleColor() {
@@ -636,7 +711,9 @@ function cycleColor() {
   colorMode = COLOR_MODES[(currentIndex + 1) % COLOR_MODES.length];
 
   localStorage.setItem(`${EXT_ID}-color`, colorMode);
-  applyState(false);
+
+  updateBodyClasses();
+  updateAllControls();
 }
 
 function cycleLayout() {
@@ -645,9 +722,9 @@ function cycleLayout() {
 
   localStorage.setItem(`${EXT_ID}-layout`, layoutMode);
 
-  restoreAllMessages();
-
-  setTimeout(() => applyState(true), 60);
+  updateBodyClasses();
+  updateAllControls();
+  updateTypographyOnly();
 }
 
 function refreshReader() {
@@ -656,13 +733,16 @@ function refreshReader() {
   setTimeout(() => {
     document.querySelectorAll('.mes_text').forEach(element => {
       delete element.dataset.adhdSeenAt;
+      delete element.dataset.adhdSeenSignature;
     });
 
     applyState(true);
 
     document.querySelectorAll(`.${EXT_ID}-refresh-button`).forEach(button => {
       button.textContent = '已重刷';
-      setTimeout(() => { button.textContent = '重刷'; }, 900);
+      setTimeout(() => {
+        button.textContent = '重刷';
+      }, 900);
     });
   }, 80);
 }
@@ -680,7 +760,9 @@ function resetReader() {
 
   restoreAllMessages();
 
-  setTimeout(() => applyState(true), 80);
+  setTimeout(() => {
+    applyState(true);
+  }, 80);
 }
 
 function findSettingsRoot() {
@@ -765,11 +847,13 @@ function ensureSettingsPanel() {
   }
 
   const root = findSettingsRoot();
+
   if (!root) return false;
 
   const panel = createControlPanel(`${EXT_ID}-settings-panel`, 'settings');
   root.prepend(panel);
   updateAllControls();
+
   return true;
 }
 
@@ -829,7 +913,9 @@ function addFocusRuler() {
     }, 1400);
   };
 
-  document.addEventListener('mousemove', event => moveRuler(event.clientY));
+  document.addEventListener('mousemove', event => {
+    moveRuler(event.clientY);
+  });
 
   document.addEventListener(
     'touchmove',
@@ -885,8 +971,9 @@ function init() {
   addFocusRuler();
   observeWholeApp();
 
-  // 启动时不要太早强行处理，避免卡住开场白/首条生成。
-  setTimeout(() => applyState(true), 900);
+  setTimeout(() => {
+    applyState(true);
+  }, 900);
 
   setTimeout(mountControls, 800);
   setTimeout(mountControls, 1800);
@@ -904,4 +991,6 @@ if (document.readyState === 'loading') {
 }
 
 setTimeout(init, 800);
-setTimeout(() => scheduleProcess(true), 2500);
+setTimeout(() => {
+  scheduleProcess(true);
+}, 2500);
