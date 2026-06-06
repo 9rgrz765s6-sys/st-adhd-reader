@@ -1,5 +1,5 @@
-// ADHD Reader V7.7
-// Chinese Stable Segmentation + Stronger Anchor Update
+// ADHD Reader V7.8
+// Heavy Mode Update: Light = old Medium, Medium = old Strong, Strong = Very Heavy
 
 const EXT_ID = 'adhd-reader';
 
@@ -98,7 +98,6 @@ const CJK_WEAK_MODIFIERS = new Set([
 ]);
 
 const CJK_ANCHOR_WORDS = new Set([
-  // 动作 / 行为
   '皱起', '蹙起', '挑眉', '抬眼', '垂眼', '低头', '抬头', '回头', '偏头', '侧头',
   '转身', '转头', '靠近', '贴近', '逼近', '远离', '离开', '退开', '后退',
   '停下', '站住', '走近', '走开', '跑来', '跑开',
@@ -113,7 +112,6 @@ const CJK_ANCHOR_WORDS = new Set([
   '醒来', '睡去', '闭眼', '睁眼', '眨眼', '移开', '躲开', '避开',
   '靠拢', '贴住', '蜷缩', '跪下', '俯身', '弯腰', '低笑', '叹息',
 
-  // 身体 / 表情
   '眉', '眼', '唇', '手', '血', '泪',
   '眉心', '眉头', '眉眼', '眼睛', '眼眸', '眼底', '眼尾', '眼睫', '睫毛',
   '瞳孔', '视线', '目光', '唇角', '嘴角', '嘴唇', '脸颊', '脸色',
@@ -122,7 +120,6 @@ const CJK_ANCHOR_WORDS = new Set([
   '腰间', '膝盖', '发梢', '长发', '黑发', '白发', '银发',
   '伤口', '血迹', '泪水', '泪痕',
 
-  // 情绪 / 状态
   '爱意', '喜欢', '厌恶', '恐惧', '害怕', '担心', '安心', '痛苦', '难过',
   '悲伤', '愤怒', '恼怒', '慌乱', '紧张', '焦虑', '温柔', '冷淡',
   '冰冷', '灼热', '炽热', '孤独', '寂寞', '绝望', '希望', '怜悯',
@@ -130,7 +127,6 @@ const CJK_ANCHOR_WORDS = new Set([
   '安静', '沉寂', '清醒', '迷茫', '茫然', '疲惫', '虚弱',
   '疼痛', '刺痛', '窒息', '眩晕', '混乱', '柔软', '僵硬', '滚烫', '寒冷',
 
-  // 场景 / 氛围
   '夜', '雨', '雪', '风', '光', '影', '门', '窗', '月', '海',
   '夜色', '雨声', '风声', '雪声', '月光', '灯光', '火光', '阳光',
   '阴影', '黑暗', '昏暗', '明亮', '黄昏', '黎明', '清晨', '深夜',
@@ -264,12 +260,10 @@ function refineChineseToken(token) {
     return [token];
   }
 
-  // 系统分词给出的 2 字词通常先信任，不乱拆。
   if (token.length === 2) {
     const first = token[0];
     const second = token[1];
 
-    // 但 “的眉”“了眼” 这种明显是虚词 + 锚点，要拆开。
     if (CJK_STOP_WORDS.has(first) && CJK_SINGLE_ANCHOR_CHARS.has(second)) {
       return [first, second];
     }
@@ -277,7 +271,6 @@ function refineChineseToken(token) {
     return [token];
   }
 
-  // 3-4 字词：只在内部明显包含词库词/虚词时拆，否则保留系统分词。
   if (token.length <= 4) {
     const parts = splitChineseAggressive(token);
 
@@ -295,7 +288,6 @@ function refineChineseToken(token) {
     return [token];
   }
 
-  // 长中文块大概率是系统分词失败，启用 fallback。
   return splitChineseAggressive(token);
 }
 
@@ -409,20 +401,20 @@ function getBoldLength(token) {
   if (isEnglishWord(token)) {
     if (mode === 'light') {
       if (len <= 3) return 1;
-      if (len <= 6) return 2;
-      return Math.ceil(len * 0.38);
+      if (len <= 5) return 2;
+      return Math.min(len - 1, Math.ceil(len * 0.46));
     }
 
     if (mode === 'medium') {
       if (len <= 3) return 1;
       if (len <= 5) return 2;
-      return Math.ceil(len * 0.46);
+      return Math.min(len - 1, Math.ceil(len * 0.55));
     }
 
     if (mode === 'strong') {
-      if (len <= 3) return 1;
-      if (len <= 5) return 2;
-      return Math.ceil(len * 0.55);
+      if (len <= 2) return 1;
+      if (len <= 4) return 2;
+      return Math.min(len - 1, Math.ceil(len * 0.65));
     }
   }
 
@@ -472,16 +464,15 @@ function getChineseAnchorWeight(token) {
     if (CJK_IMPORTANT_CHAR_PATTERN.test(token)) return 2;
     if (CJK_ACTION_CHAR_PATTERN.test(token)) return 2;
 
-    return mode === 'strong' ? 1 : 0;
+    if (mode === 'medium' || mode === 'strong') return 1;
+    return 0;
   }
 
   if (token.length === 2) {
     if (CJK_IMPORTANT_CHAR_PATTERN.test(token)) return 2;
     if (CJK_ACTION_CHAR_PATTERN.test(token)) return 2;
 
-    // 中模式开始允许少量普通双字词成为弱锚点，但通过间隔控制避免乱。
-    if (mode === 'medium') return 1;
-    if (mode === 'strong') return 1;
+    if (mode === 'light' || mode === 'medium' || mode === 'strong') return 1;
   }
 
   return 0;
@@ -503,29 +494,28 @@ function canRenderChineseAnchor(token, state, weight) {
   if (weight <= 0) return false;
 
   const maxAnchors =
-    mode === 'light' ? 4 :
-    mode === 'medium' ? 8 :
-    13;
+    mode === 'light' ? 8 :
+    mode === 'medium' ? 13 :
+    24;
 
   if (state.anchorsInSentence >= maxAnchors) return false;
 
   if (weight >= 4) return true;
 
   if (mode === 'light') {
-    if (weight >= 3) return state.tokensSinceAnchor >= 1;
-    if (weight >= 2) return state.tokensSinceAnchor >= 2;
-    return false;
-  }
-
-  if (mode === 'medium') {
     if (weight >= 3) return true;
     if (weight === 2) return state.tokensSinceAnchor >= 1;
     if (weight === 1) return state.tokensSinceAnchor >= 2;
   }
 
-  if (mode === 'strong') {
+  if (mode === 'medium') {
     if (weight >= 2) return true;
     if (weight === 1) return state.tokensSinceAnchor >= 1;
+  }
+
+  if (mode === 'strong') {
+    if (weight >= 2) return true;
+    if (weight === 1) return true;
   }
 
   return false;
@@ -539,16 +529,18 @@ function getChineseBoldLength(token, weight) {
     return weight >= 4 ? 1 : 0;
   }
 
-  // 中文两字词：首字加粗、后字变淡，视觉最稳定。
   if (len === 2) {
     return 1;
   }
 
   if (weight >= 4) {
-    return mode === 'strong' ? Math.min(2, len - 1) : 1;
+    if (mode === 'strong') return Math.min(3, len - 1);
+    if (mode === 'medium') return Math.min(2, len - 1);
+    return 1;
   }
 
   if (weight >= 2) {
+    if (mode === 'strong') return Math.min(2, len - 1);
     return 1;
   }
 
