@@ -1,5 +1,5 @@
-// ADHD Reader V7.6
-// Chinese Visible Semantic Anchor Update
+// ADHD Reader V7.7
+// Chinese Stable Segmentation + Stronger Anchor Update
 
 const EXT_ID = 'adhd-reader';
 
@@ -72,481 +72,84 @@ const SKIP_TAGS = new Set([
 ]);
 
 const CJK_STOP_WORDS = new Set([
-  '的',
-  '了',
-  '着',
-  '过',
-  '吗',
-  '呢',
-  '吧',
-  '啊',
-  '呀',
-  '哦',
-  '喔',
-  '嘛',
-  '啦',
-  '罢',
-  '也',
-  '都',
-  '就',
-  '又',
-  '还',
-  '很',
-  '更',
-  '最',
-  '太',
-  '挺',
-  '真',
-  '蛮',
-  '颇',
-  '却',
-  '而',
-  '并',
-  '且',
-  '和',
-  '与',
-  '或',
-  '及',
-  '跟',
-  '同',
-  '在',
-  '从',
-  '向',
-  '往',
-  '朝',
-  '被',
-  '把',
-  '让',
-  '给',
-  '对',
-  '比',
-  '为',
-  '于',
-  '由',
-  '因',
-  '中',
-  '里',
-  '内',
-  '外',
-  '上',
-  '下',
-  '前',
-  '后',
-  '旁',
-  '边',
-  '间',
-  '处',
-  '时',
-  '当',
-  '那',
-  '这',
-  '哪',
-  '某',
-  '每',
-  '各',
-  '其',
-  '该',
-  '此',
-  '彼',
-  '之',
-  '所',
-  '才',
-  '便',
-  '只',
-  '仅',
-  '再',
-  '可',
-  '能',
-  '会',
-  '要',
-  '想',
-  '应',
-  '该',
-  '是',
-  '有',
-  '没',
-  '无',
-  '不',
-  '非',
-  '已',
-  '将',
-  '曾',
-  '正',
-  '他',
-  '她',
-  '它',
-  '我',
-  '你',
-  '您',
-  '们',
-  '谁',
-  '什么',
-  '怎么',
-  '怎样',
-  '为什么',
-  '不是',
-  '没有',
-  '不能',
-  '不会',
-  '不要',
-  '只是',
-  '可是',
-  '但是',
-  '然而',
-  '然后',
-  '于是',
-  '所以',
-  '因为',
-  '如果',
-  '虽然',
-  '已经',
-  '正在',
-  '可以',
-  '可能',
-  '应该',
+  '的', '了', '着', '过', '吗', '呢', '吧', '啊', '呀', '哦', '喔', '嘛', '啦',
+  '也', '都', '就', '又', '还', '很', '更', '最', '太', '挺', '真',
+  '却', '而', '并', '且', '和', '与', '或', '及', '跟', '同',
+  '在', '从', '向', '往', '朝', '被', '把', '让', '给', '对', '比', '为', '于',
+  '中', '里', '内', '外', '上', '下', '前', '后', '旁', '边', '间', '处', '时',
+  '那', '这', '哪', '某', '每', '各', '其', '该', '此', '彼', '之', '所',
+  '才', '便', '只', '仅', '再', '可', '能', '会', '要', '想', '应', '该',
+  '是', '有', '没', '无', '不', '非', '已', '将', '曾', '正',
+  '他', '她', '它', '我', '你', '您', '们', '谁',
+  '什么', '怎么', '怎样', '为什么',
+  '不是', '没有', '不能', '不会', '不要',
+  '只是', '可是', '但是', '然而', '然后', '于是', '所以', '因为', '如果', '虽然',
+  '已经', '正在', '可以', '可能', '应该',
 ]);
 
 const CJK_WEAK_MODIFIERS = new Set([
-  '微微',
-  '轻轻',
-  '缓缓',
-  '慢慢',
-  '稍稍',
-  '略微',
-  '轻微',
-  '隐约',
-  '依稀',
-  '似乎',
-  '仿佛',
-  '好像',
-  '像是',
-  '几乎',
-  '大概',
-  '或许',
-  '也许',
-  '可能',
-  '依旧',
-  '仍然',
-  '终于',
-  '忽然',
-  '突然',
-  '猛地',
-  '顿时',
-  '渐渐',
-  '一点',
-  '一点点',
-  '有点',
-  '有些',
-  '格外',
-  '格外地',
-  '十分',
-  '非常',
-  '尤其',
-  '更加',
-  '越发',
-  '越加',
-  '那么',
-  '这么',
-  '轻声',
-  '低低',
-  '小声',
-  '悄悄',
-  '静静',
-  '默默',
+  '微微', '轻轻', '缓缓', '慢慢', '稍稍', '略微', '轻微',
+  '隐约', '依稀', '似乎', '仿佛', '好像', '像是',
+  '几乎', '大概', '或许', '也许', '可能',
+  '依旧', '仍然', '终于', '忽然', '突然', '猛地', '顿时', '渐渐',
+  '一点', '一点点', '有点', '有些',
+  '格外', '格外地', '十分', '非常', '尤其', '更加', '越发', '越加',
+  '那么', '这么', '轻声', '低低', '小声', '悄悄', '静静', '默默',
 ]);
 
 const CJK_ANCHOR_WORDS = new Set([
   // 动作 / 行为
-  '皱起',
-  '蹙起',
-  '挑眉',
-  '抬眼',
-  '垂眼',
-  '低头',
-  '抬头',
-  '回头',
-  '偏头',
-  '侧头',
-  '转身',
-  '转头',
-  '靠近',
-  '贴近',
-  '逼近',
-  '远离',
-  '离开',
-  '退开',
-  '后退',
-  '停下',
-  '站住',
-  '走近',
-  '走开',
-  '跑来',
-  '跑开',
-  '伸手',
-  '收手',
-  '抬手',
-  '垂手',
-  '握住',
-  '抓住',
-  '攥住',
-  '抱住',
-  '拥住',
-  '搂住',
-  '推开',
-  '拉开',
-  '拉住',
-  '按住',
-  '扣住',
-  '捧起',
-  '托起',
-  '抚摸',
-  '抚过',
-  '擦过',
-  '触碰',
-  '碰到',
-  '吻上',
-  '亲吻',
-  '咬住',
-  '贴上',
-  '贴着',
-  '靠着',
-  '靠在',
-  '凝视',
-  '注视',
-  '看向',
-  '望向',
-  '盯着',
-  '瞥见',
-  '看见',
-  '听见',
-  '听到',
-  '开口',
-  '回答',
-  '询问',
-  '低语',
-  '呢喃',
-  '耳语',
-  '轻笑',
-  '苦笑',
-  '冷笑',
-  '哭泣',
-  '啜泣',
-  '哽咽',
-  '沉默',
-  '呼吸',
-  '喘息',
-  '颤抖',
-  '发抖',
-  '僵住',
-  '愣住',
-  '怔住',
-  '醒来',
-  '睡去',
-  '闭眼',
-  '睁眼',
-  '眨眼',
-  '移开',
-  '躲开',
-  '避开',
-  '靠拢',
-  '贴住',
-  '蜷缩',
-  '跪下',
-  '俯身',
-  '弯腰',
-  '低笑',
-  '叹息',
+  '皱起', '蹙起', '挑眉', '抬眼', '垂眼', '低头', '抬头', '回头', '偏头', '侧头',
+  '转身', '转头', '靠近', '贴近', '逼近', '远离', '离开', '退开', '后退',
+  '停下', '站住', '走近', '走开', '跑来', '跑开',
+  '伸手', '收手', '抬手', '垂手', '握住', '抓住', '攥住',
+  '抱住', '拥住', '搂住', '推开', '拉开', '拉住', '按住', '扣住',
+  '捧起', '托起', '抚摸', '抚过', '擦过', '触碰', '碰到',
+  '吻上', '亲吻', '咬住', '贴上', '贴着', '靠着', '靠在',
+  '凝视', '注视', '看向', '望向', '盯着', '瞥见', '看见',
+  '听见', '听到', '开口', '回答', '询问', '低语', '呢喃', '耳语',
+  '轻笑', '苦笑', '冷笑', '哭泣', '啜泣', '哽咽',
+  '沉默', '呼吸', '喘息', '颤抖', '发抖', '僵住', '愣住', '怔住',
+  '醒来', '睡去', '闭眼', '睁眼', '眨眼', '移开', '躲开', '避开',
+  '靠拢', '贴住', '蜷缩', '跪下', '俯身', '弯腰', '低笑', '叹息',
 
   // 身体 / 表情
-  '眉',
-  '眼',
-  '唇',
-  '手',
-  '血',
-  '泪',
-  '眉心',
-  '眉头',
-  '眉眼',
-  '眼睛',
-  '眼眸',
-  '眼底',
-  '眼尾',
-  '眼睫',
-  '睫毛',
-  '瞳孔',
-  '视线',
-  '目光',
-  '唇角',
-  '嘴角',
-  '嘴唇',
-  '脸颊',
-  '脸色',
-  '耳尖',
-  '耳畔',
-  '指尖',
-  '手指',
-  '手心',
-  '掌心',
-  '手腕',
-  '手臂',
-  '肩膀',
-  '胸口',
-  '心口',
-  '心脏',
-  '喉咙',
-  '喉结',
-  '脖颈',
-  '后颈',
-  '腰间',
-  '膝盖',
-  '发梢',
-  '长发',
-  '黑发',
-  '白发',
-  '银发',
-  '伤口',
-  '血迹',
-  '泪水',
-  '泪痕',
+  '眉', '眼', '唇', '手', '血', '泪',
+  '眉心', '眉头', '眉眼', '眼睛', '眼眸', '眼底', '眼尾', '眼睫', '睫毛',
+  '瞳孔', '视线', '目光', '唇角', '嘴角', '嘴唇', '脸颊', '脸色',
+  '耳尖', '耳畔', '指尖', '手指', '手心', '掌心', '手腕', '手臂',
+  '肩膀', '胸口', '心口', '心脏', '喉咙', '喉结', '脖颈', '后颈',
+  '腰间', '膝盖', '发梢', '长发', '黑发', '白发', '银发',
+  '伤口', '血迹', '泪水', '泪痕',
 
   // 情绪 / 状态
-  '爱意',
-  '喜欢',
-  '厌恶',
-  '恐惧',
-  '害怕',
-  '担心',
-  '安心',
-  '痛苦',
-  '难过',
-  '悲伤',
-  '愤怒',
-  '恼怒',
-  '慌乱',
-  '紧张',
-  '焦虑',
-  '温柔',
-  '冷淡',
-  '冰冷',
-  '灼热',
-  '炽热',
-  '孤独',
-  '寂寞',
-  '绝望',
-  '希望',
-  '怜悯',
-  '心疼',
-  '失神',
-  '动摇',
-  '颤栗',
-  '压抑',
-  '克制',
-  '疯狂',
-  '平静',
-  '安静',
-  '沉寂',
-  '清醒',
-  '迷茫',
-  '茫然',
-  '疲惫',
-  '虚弱',
-  '疼痛',
-  '刺痛',
-  '窒息',
-  '眩晕',
-  '混乱',
-  '柔软',
-  '僵硬',
-  '滚烫',
-  '寒冷',
+  '爱意', '喜欢', '厌恶', '恐惧', '害怕', '担心', '安心', '痛苦', '难过',
+  '悲伤', '愤怒', '恼怒', '慌乱', '紧张', '焦虑', '温柔', '冷淡',
+  '冰冷', '灼热', '炽热', '孤独', '寂寞', '绝望', '希望', '怜悯',
+  '心疼', '失神', '动摇', '颤栗', '压抑', '克制', '疯狂', '平静',
+  '安静', '沉寂', '清醒', '迷茫', '茫然', '疲惫', '虚弱',
+  '疼痛', '刺痛', '窒息', '眩晕', '混乱', '柔软', '僵硬', '滚烫', '寒冷',
 
   // 场景 / 氛围
-  '夜',
-  '雨',
-  '雪',
-  '风',
-  '光',
-  '影',
-  '门',
-  '窗',
-  '月',
-  '海',
-  '夜色',
-  '雨声',
-  '风声',
-  '雪声',
-  '月光',
-  '灯光',
-  '火光',
-  '阳光',
-  '阴影',
-  '黑暗',
-  '昏暗',
-  '明亮',
-  '黄昏',
-  '黎明',
-  '清晨',
-  '深夜',
-  '房间',
-  '卧室',
-  '客厅',
-  '走廊',
-  '门口',
-  '窗边',
-  '床边',
-  '桌边',
-  '街道',
-  '街角',
-  '城市',
-  '森林',
-  '花园',
-  '庭院',
-  '海边',
-  '雪地',
-  '雨幕',
-  '空气',
-  '气息',
-  '声音',
-  '回声',
-  '世界',
-  '神殿',
-  '屏幕',
-  '镜头',
+  '夜', '雨', '雪', '风', '光', '影', '门', '窗', '月', '海',
+  '夜色', '雨声', '风声', '雪声', '月光', '灯光', '火光', '阳光',
+  '阴影', '黑暗', '昏暗', '明亮', '黄昏', '黎明', '清晨', '深夜',
+  '房间', '卧室', '客厅', '走廊', '门口', '窗边', '床边', '桌边',
+  '街道', '街角', '城市', '森林', '花园', '庭院', '海边', '雪地',
+  '雨幕', '空气', '气息', '声音', '回声', '世界', '神殿', '屏幕', '镜头',
 ]);
 
 const CJK_SINGLE_ANCHOR_CHARS = new Set([
-  '眉',
-  '眼',
-  '唇',
-  '手',
-  '血',
-  '泪',
-  '心',
-  '光',
-  '影',
-  '风',
-  '雨',
-  '雪',
-  '夜',
-  '月',
-  '门',
-  '窗',
-  '海',
-  '火',
-  '声',
-  '梦',
-  '痛',
-  '怕',
-  '笑',
-  '哭',
-  '吻',
+  '眉', '眼', '唇', '手', '血', '泪', '心',
+  '光', '影', '风', '雨', '雪', '夜', '月', '门', '窗', '海', '火', '声',
+  '梦', '痛', '怕', '笑', '哭', '吻',
 ]);
 
 const CJK_IMPORTANT_CHAR_PATTERN =
-  /[眼眉唇脸手指腕肩胸心喉颈泪血光影风雨雪夜月声门窗房屋室街城林海梦痛怕笑哭吻看望视听说问答走跑转停伸握抱推拉靠贴触咬抬低垂颤抖冷热暗明]/;
+  /[眼眉唇脸手指腕肩胸心喉颈泪血光影风雨雪夜月声门窗房屋室街城林海梦痛怕笑哭吻冷热暗明]/;
 
 const CJK_ACTION_CHAR_PATTERN =
-  /[看望视听说问答笑哭走跑转停伸握抱推拉靠贴触吻咬抬低垂颤抖怔愣僵退离靠贴]/;
+  /[看望视听说问答走跑转停伸握抱推拉靠贴触吻咬抬低垂颤抖怔愣僵退离]/;
 
 const CJK_DICTIONARY = Array.from(
   new Set([
@@ -586,10 +189,6 @@ function isEnglishWord(token) {
   return /^[A-Za-z0-9][A-Za-z0-9'-]*$/.test(token);
 }
 
-function hasCJK(token) {
-  return /[\u3400-\u9fff]/.test(token);
-}
-
 function countCJK(text) {
   const match = text.match(/[\u3400-\u9fff]/g);
   return match ? match.length : 0;
@@ -600,7 +199,17 @@ function countLatin(text) {
   return match ? match.length : 0;
 }
 
-function splitChineseBuffer(text) {
+function findDictionaryMatch(text, index) {
+  for (const word of CJK_DICTIONARY) {
+    if (text.startsWith(word, index)) {
+      return word;
+    }
+  }
+
+  return '';
+}
+
+function splitChineseAggressive(text) {
   const result = [];
   let i = 0;
 
@@ -613,14 +222,7 @@ function splitChineseBuffer(text) {
       continue;
     }
 
-    let matched = '';
-
-    for (const word of CJK_DICTIONARY) {
-      if (text.startsWith(word, i)) {
-        matched = word;
-        break;
-      }
-    }
+    const matched = findDictionaryMatch(text, i);
 
     if (matched) {
       result.push(matched);
@@ -631,8 +233,7 @@ function splitChineseBuffer(text) {
     const remain = text.length - i;
 
     if (remain >= 4) {
-      const nextTwo = text.slice(i, i + 2);
-      result.push(nextTwo);
+      result.push(text.slice(i, i + 2));
       i += 2;
     } else if (remain === 3) {
       result.push(text.slice(i, i + 2));
@@ -647,17 +248,65 @@ function splitChineseBuffer(text) {
     }
   }
 
-  return result;
+  return result.filter(Boolean);
 }
 
-function normalizeSegments(segments) {
+function refineChineseToken(token) {
+  if (!isPureCJKToken(token)) return [token];
+
+  if (token.length <= 1) return [token];
+
+  if (
+    CJK_STOP_WORDS.has(token) ||
+    CJK_WEAK_MODIFIERS.has(token) ||
+    CJK_ANCHOR_WORDS.has(token)
+  ) {
+    return [token];
+  }
+
+  // 系统分词给出的 2 字词通常先信任，不乱拆。
+  if (token.length === 2) {
+    const first = token[0];
+    const second = token[1];
+
+    // 但 “的眉”“了眼” 这种明显是虚词 + 锚点，要拆开。
+    if (CJK_STOP_WORDS.has(first) && CJK_SINGLE_ANCHOR_CHARS.has(second)) {
+      return [first, second];
+    }
+
+    return [token];
+  }
+
+  // 3-4 字词：只在内部明显包含词库词/虚词时拆，否则保留系统分词。
+  if (token.length <= 4) {
+    const parts = splitChineseAggressive(token);
+
+    const hasMeaningfulBoundary = parts.some(part =>
+      CJK_ANCHOR_WORDS.has(part) ||
+      CJK_WEAK_MODIFIERS.has(part) ||
+      CJK_STOP_WORDS.has(part) ||
+      (part.length === 1 && CJK_SINGLE_ANCHOR_CHARS.has(part))
+    );
+
+    if (parts.length > 1 && hasMeaningfulBoundary) {
+      return parts;
+    }
+
+    return [token];
+  }
+
+  // 长中文块大概率是系统分词失败，启用 fallback。
+  return splitChineseAggressive(token);
+}
+
+function refineSegments(segments) {
   const result = [];
 
   for (const part of segments) {
     if (!part) continue;
 
-    if (isPureCJKToken(part) && part.length > 1) {
-      result.push(...splitChineseBuffer(part));
+    if (isPureCJKToken(part)) {
+      result.push(...refineChineseToken(part));
     } else {
       result.push(part);
     }
@@ -675,7 +324,7 @@ function fallbackSegmentText(text) {
     if (!buffer) return;
 
     if (bufferType === 'cjk') {
-      result.push(...splitChineseBuffer(buffer));
+      result.push(...splitChineseAggressive(buffer));
     } else if (bufferType === 'latin') {
       result.push(...buffer.split(/(\s+)/g).filter(Boolean));
     } else {
@@ -728,8 +377,8 @@ function segmentText(text) {
         part.length === 1
       );
 
-      const hasLongChineseChunk = chineseSegments.some(part =>
-        part.length >= 7
+      const hasVeryLongChineseChunk = chineseSegments.some(part =>
+        part.length >= 8
       );
 
       const tooFewSegments =
@@ -739,11 +388,11 @@ function segmentText(text) {
 
       const tooManySingleChinese =
         hasChinese &&
-        chineseSegments.length >= 6 &&
-        singleChineseSegments.length / chineseSegments.length > 0.65;
+        chineseSegments.length >= 8 &&
+        singleChineseSegments.length / chineseSegments.length > 0.72;
 
-      if (!hasLongChineseChunk && !tooFewSegments && !tooManySingleChinese) {
-        return normalizeSegments(segmented);
+      if (!hasVeryLongChineseChunk && !tooFewSegments && !tooManySingleChinese) {
+        return refineSegments(segmented);
       }
     }
   } catch (error) {
@@ -759,21 +408,21 @@ function getBoldLength(token) {
 
   if (isEnglishWord(token)) {
     if (mode === 'light') {
-      if (len <= 4) return 0;
+      if (len <= 3) return 1;
       if (len <= 6) return 2;
-      return Math.ceil(len * 0.35);
+      return Math.ceil(len * 0.38);
     }
 
     if (mode === 'medium') {
       if (len <= 3) return 1;
       if (len <= 5) return 2;
-      return Math.ceil(len * 0.42);
+      return Math.ceil(len * 0.46);
     }
 
     if (mode === 'strong') {
       if (len <= 3) return 1;
       if (len <= 5) return 2;
-      return Math.ceil(len * 0.5);
+      return Math.ceil(len * 0.55);
     }
   }
 
@@ -784,14 +433,14 @@ function getSemanticClass(token) {
   const lower = token.toLowerCase();
 
   if (
-    /爱|喜欢|恨|哭|笑|心|梦|怕|痛|温柔|孤独|命运|希望|绝望|愤怒|难过|快乐|悲伤|焦虑|安心|害怕|幸福|沉默|担心|怜悯|关心|安慰|慌乱|紧张|心疼|失神|动摇|压抑|疲惫|疼痛|寂寞|恐惧|悲伤|愤怒|灼热|冰冷/.test(token) ||
+    /爱|喜欢|恨|哭|笑|心|梦|怕|痛|温柔|孤独|命运|希望|绝望|愤怒|难过|快乐|悲伤|焦虑|安心|害怕|幸福|沉默|担心|怜悯|关心|安慰|慌乱|紧张|心疼|失神|动摇|压抑|疲惫|疼痛|寂寞|恐惧|灼热|冰冷/.test(token) ||
     /love|like|hate|cry|smile|heart|dream|fear|pain|gentle|lonely|fate|hope|despair|angry|sad|anxious|safe|happy|silence|worried|worry|comfort|compassion|concern|caring|afraid|relief|tender|sorrow|grief/.test(lower)
   ) {
     return 'adhd-semantic-emotion';
   }
 
   if (
-    /说|问|看|走|跑|伸|握|抱|吻|低头|抬眼|靠近|离开|推开|转身|停下|颤抖|呼吸|触碰|凝视|醒来|治愈|恢复|寻找|握住|扶起|皱起|开口|回答|注视|抚摸|亲吻|闭眼|睁眼|垂眼|回头|偏头|侧头|攥住|抱住|搂住|拉住|按住/.test(token) ||
+    /说|问|看|走|跑|伸|握|抱|吻|低头|抬眼|靠近|离开|推开|转身|停下|颤抖|呼吸|触碰|凝视|醒来|治愈|恢复|寻找|握住|扶起|皱起|开口|回答|注视|抚摸|亲吻|闭眼|睁眼|垂眼|回头|偏头|侧头|攥住|搂住|拉住|按住/.test(token) ||
     /say|said|ask|asked|look|walk|run|reach|hold|hug|kiss|breathe|touch|stare|shiver|leave|turn|stop|wake|heal|find|search|clasp|restore|move|step|lean|whisper|watch|open|close/.test(lower)
   ) {
     return 'adhd-semantic-action';
@@ -822,6 +471,7 @@ function getChineseAnchorWeight(token) {
   if (token.length >= 3) {
     if (CJK_IMPORTANT_CHAR_PATTERN.test(token)) return 2;
     if (CJK_ACTION_CHAR_PATTERN.test(token)) return 2;
+
     return mode === 'strong' ? 1 : 0;
   }
 
@@ -829,9 +479,9 @@ function getChineseAnchorWeight(token) {
     if (CJK_IMPORTANT_CHAR_PATTERN.test(token)) return 2;
     if (CJK_ACTION_CHAR_PATTERN.test(token)) return 2;
 
-    if (mode === 'medium' || mode === 'strong') {
-      return 1;
-    }
+    // 中模式开始允许少量普通双字词成为弱锚点，但通过间隔控制避免乱。
+    if (mode === 'medium') return 1;
+    if (mode === 'strong') return 1;
   }
 
   return 0;
@@ -853,20 +503,22 @@ function canRenderChineseAnchor(token, state, weight) {
   if (weight <= 0) return false;
 
   const maxAnchors =
-    mode === 'light' ? 3 :
-    mode === 'medium' ? 6 :
-    10;
+    mode === 'light' ? 4 :
+    mode === 'medium' ? 8 :
+    13;
 
   if (state.anchorsInSentence >= maxAnchors) return false;
 
   if (weight >= 4) return true;
 
   if (mode === 'light') {
-    return weight >= 3 && state.tokensSinceAnchor >= 2;
+    if (weight >= 3) return state.tokensSinceAnchor >= 1;
+    if (weight >= 2) return state.tokensSinceAnchor >= 2;
+    return false;
   }
 
   if (mode === 'medium') {
-    if (weight >= 3) return state.tokensSinceAnchor >= 1;
+    if (weight >= 3) return true;
     if (weight === 2) return state.tokensSinceAnchor >= 1;
     if (weight === 1) return state.tokensSinceAnchor >= 2;
   }
@@ -887,12 +539,13 @@ function getChineseBoldLength(token, weight) {
     return weight >= 4 ? 1 : 0;
   }
 
+  // 中文两字词：首字加粗、后字变淡，视觉最稳定。
   if (len === 2) {
     return 1;
   }
 
   if (weight >= 4) {
-    return Math.min(2, Math.ceil(len * 0.45));
+    return mode === 'strong' ? Math.min(2, len - 1) : 1;
   }
 
   if (weight >= 2) {
@@ -924,7 +577,6 @@ function appendReadableToken(fragment, token, cut, allowWhole = false) {
   const bold = document.createElement('span');
   bold.className = 'adhd-bold';
   bold.textContent = token.slice(0, cut);
-
   wrapper.appendChild(bold);
 
   if (cut < token.length) {
