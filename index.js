@@ -1,3 +1,6 @@
+// ADHD Reader V7.5
+// Chinese Semantic Anchor Update
+
 const EXT_ID = 'adhd-reader';
 
 const MODES = ['off', 'light', 'medium', 'strong'];
@@ -68,6 +71,395 @@ const SKIP_TAGS = new Set([
   'OPTION',
 ]);
 
+const CJK_STOP_WORDS = new Set([
+  '的',
+  '了',
+  '着',
+  '过',
+  '吗',
+  '呢',
+  '吧',
+  '啊',
+  '呀',
+  '哦',
+  '喔',
+  '嘛',
+  '啦',
+  '也',
+  '都',
+  '就',
+  '又',
+  '还',
+  '很',
+  '更',
+  '最',
+  '太',
+  '挺',
+  '真',
+  '却',
+  '而',
+  '并',
+  '和',
+  '与',
+  '或',
+  '及',
+  '在',
+  '从',
+  '向',
+  '往',
+  '被',
+  '把',
+  '让',
+  '给',
+  '对',
+  '比',
+  '为',
+  '于',
+  '中',
+  '里',
+  '内',
+  '外',
+  '上',
+  '下',
+  '前',
+  '后',
+  '旁',
+  '边',
+  '间',
+  '处',
+  '时',
+  '当',
+  '那',
+  '这',
+  '哪',
+  '某',
+  '每',
+  '各',
+  '其',
+  '该',
+  '此',
+  '之',
+  '所',
+  '才',
+  '便',
+  '只',
+  '仅',
+  '再',
+  '又',
+  '可',
+  '能',
+  '会',
+  '要',
+  '想',
+  '是',
+  '有',
+  '没',
+  '不',
+  '无',
+  '非',
+  '已',
+  '将',
+  '被',
+  '它',
+  '他',
+  '她',
+  '我',
+  '你',
+  '您',
+  '们',
+  '谁',
+  '什么',
+  '怎么',
+  '怎样',
+  '为什么',
+]);
+
+const CJK_WEAK_MODIFIERS = new Set([
+  '微微',
+  '轻轻',
+  '缓缓',
+  '慢慢',
+  '稍稍',
+  '略微',
+  '轻微',
+  '隐约',
+  '依稀',
+  '似乎',
+  '仿佛',
+  '好像',
+  '像是',
+  '几乎',
+  '大概',
+  '或许',
+  '也许',
+  '可能',
+  '只是',
+  '仅仅',
+  '依旧',
+  '仍然',
+  '终于',
+  '忽然',
+  '突然',
+  '猛地',
+  '顿时',
+  '渐渐',
+  '一点',
+  '一点点',
+  '有点',
+  '有些',
+  '格外',
+  '格外地',
+  '十分',
+  '非常',
+  '尤其',
+  '更加',
+  '越发',
+  '越加',
+  '那么',
+  '这么',
+]);
+
+const CJK_ANCHOR_WORDS = new Set([
+  // 常见动作
+  '皱起',
+  '蹙起',
+  '抬眼',
+  '垂眼',
+  '低头',
+  '抬头',
+  '回头',
+  '偏头',
+  '侧头',
+  '转身',
+  '转头',
+  '靠近',
+  '贴近',
+  '逼近',
+  '远离',
+  '离开',
+  '退开',
+  '后退',
+  '停下',
+  '站住',
+  '走近',
+  '走开',
+  '跑来',
+  '跑开',
+  '伸手',
+  '收手',
+  '抬手',
+  '垂手',
+  '握住',
+  '抓住',
+  '攥住',
+  '抱住',
+  '拥住',
+  '搂住',
+  '推开',
+  '拉开',
+  '拉住',
+  '按住',
+  '扣住',
+  '捧起',
+  '托起',
+  '抚摸',
+  '触碰',
+  '碰到',
+  '吻上',
+  '亲吻',
+  '咬住',
+  '贴上',
+  '贴着',
+  '靠着',
+  '靠在',
+  '凝视',
+  '注视',
+  '看向',
+  '望向',
+  '盯着',
+  '瞥见',
+  '看见',
+  '听见',
+  '听到',
+  '开口',
+  '回答',
+  '询问',
+  '低语',
+  '呢喃',
+  '耳语',
+  '轻笑',
+  '苦笑',
+  '冷笑',
+  '哭泣',
+  '啜泣',
+  '哽咽',
+  '沉默',
+  '呼吸',
+  '喘息',
+  '颤抖',
+  '发抖',
+  '僵住',
+  '愣住',
+  '怔住',
+  '醒来',
+  '睡去',
+  '闭眼',
+  '睁眼',
+
+  // 身体 / 表情
+  '眉',
+  '眼',
+  '唇',
+  '手',
+  '血',
+  '泪',
+  '眉心',
+  '眉头',
+  '眉眼',
+  '眼睛',
+  '眼眸',
+  '眼底',
+  '眼尾',
+  '眼睫',
+  '睫毛',
+  '瞳孔',
+  '视线',
+  '目光',
+  '唇角',
+  '嘴角',
+  '嘴唇',
+  '脸颊',
+  '脸色',
+  '耳尖',
+  '耳畔',
+  '指尖',
+  '手指',
+  '手心',
+  '掌心',
+  '手腕',
+  '手臂',
+  '肩膀',
+  '胸口',
+  '心口',
+  '心脏',
+  '喉咙',
+  '喉结',
+  '脖颈',
+  '后颈',
+  '腰间',
+  '膝盖',
+  '发梢',
+  '长发',
+  '黑发',
+  '白发',
+  '银发',
+
+  // 情绪 / 状态
+  '爱意',
+  '喜欢',
+  '厌恶',
+  '恐惧',
+  '害怕',
+  '担心',
+  '安心',
+  '痛苦',
+  '难过',
+  '悲伤',
+  '愤怒',
+  '恼怒',
+  '慌乱',
+  '紧张',
+  '焦虑',
+  '温柔',
+  '冷淡',
+  '冰冷',
+  '灼热',
+  '炽热',
+  '孤独',
+  '寂寞',
+  '绝望',
+  '希望',
+  '怜悯',
+  '心疼',
+  '失神',
+  '动摇',
+  '颤栗',
+  '压抑',
+  '克制',
+  '疯狂',
+  '平静',
+  '安静',
+  '沉寂',
+  '清醒',
+  '迷茫',
+  '茫然',
+  '疲惫',
+  '虚弱',
+  '疼痛',
+  '刺痛',
+
+  // 场景 / 氛围
+  '夜',
+  '雨',
+  '雪',
+  '风',
+  '光',
+  '影',
+  '门',
+  '窗',
+  '月',
+  '海',
+  '夜色',
+  '雨声',
+  '风声',
+  '雪声',
+  '月光',
+  '灯光',
+  '火光',
+  '阳光',
+  '阴影',
+  '黑暗',
+  '黄昏',
+  '黎明',
+  '清晨',
+  '深夜',
+  '房间',
+  '卧室',
+  '客厅',
+  '走廊',
+  '门口',
+  '窗边',
+  '床边',
+  '桌边',
+  '街道',
+  '街角',
+  '城市',
+  '森林',
+  '花园',
+  '庭院',
+  '海边',
+  '雪地',
+  '雨幕',
+  '空气',
+  '气息',
+  '声音',
+  '回声',
+  '世界',
+  '神殿',
+  '屏幕',
+  '镜头',
+]);
+
+const CJK_DICTIONARY = Array.from(
+  new Set([
+    ...CJK_ANCHOR_WORDS,
+    ...CJK_WEAK_MODIFIERS,
+    ...CJK_STOP_WORDS,
+  ])
+)
+  .filter(word => word.length > 1)
+  .sort((a, b) => b.length - a.length);
+
 function isEnabled() {
   return mode !== 'off';
 }
@@ -76,12 +468,20 @@ function isCJKChar(char) {
   return /[\u3400-\u9fff]/.test(char);
 }
 
+function isPureCJKToken(text) {
+  return /^[\u3400-\u9fff]+$/.test(text);
+}
+
 function isLatinChar(char) {
   return /[A-Za-z0-9'-]/.test(char);
 }
 
 function isWhitespaceOrPunctuation(text) {
   return /^[\s。，、！？；：,.!?;:()[\]{}《》“”‘’"'—…·\-]+$/.test(text);
+}
+
+function isSentenceBoundary(text) {
+  return /[。！？!?；;：:\n]/.test(text);
 }
 
 function isEnglishWord(token) {
@@ -107,25 +507,58 @@ function splitChineseBuffer(text) {
   let i = 0;
 
   while (i < text.length) {
+    const single = text[i];
+
+    if (CJK_STOP_WORDS.has(single) || CJK_ANCHOR_WORDS.has(single)) {
+      result.push(single);
+      i += 1;
+      continue;
+    }
+
+    let matched = '';
+
+    for (const word of CJK_DICTIONARY) {
+      if (text.startsWith(word, i)) {
+        matched = word;
+        break;
+      }
+    }
+
+    if (matched) {
+      result.push(matched);
+      i += matched.length;
+      continue;
+    }
+
     const remain = text.length - i;
 
-    if (remain >= 6) {
-      result.push(text.slice(i, i + 3));
-      i += 3;
-    } else if (remain >= 4) {
-      result.push(text.slice(i, i + 2));
+    if (remain >= 2) {
+      const nextTwo = text.slice(i, i + 2);
+      result.push(nextTwo);
       i += 2;
-    } else if (remain === 3) {
-      result.push(text.slice(i, i + 2));
-      result.push(text.slice(i + 2));
-      i += 3;
     } else {
-      result.push(text.slice(i));
-      break;
+      result.push(single);
+      i += 1;
     }
   }
 
   return result;
+}
+
+function normalizeSegments(segments) {
+  const result = [];
+
+  for (const part of segments) {
+    if (!part) continue;
+
+    if (isPureCJKToken(part) && part.length > 1) {
+      result.push(...splitChineseBuffer(part));
+    } else {
+      result.push(part);
+    }
+  }
+
+  return result.filter(Boolean);
 }
 
 function fallbackSegmentText(text) {
@@ -205,7 +638,7 @@ function segmentText(text) {
         singleChineseSegments.length / chineseSegments.length > 0.65;
 
       if (!hasLongChineseChunk && !tooFewSegments && !tooManySingleChinese) {
-        return segmented;
+        return normalizeSegments(segmented);
       }
     }
   } catch (error) {
@@ -239,26 +672,113 @@ function getBoldLength(token) {
     }
   }
 
-  if (hasCJK(token)) {
-    if (mode === 'light') {
-      if (len <= 1) return 0;
-      if (len <= 4) return 1;
+  return 0;
+}
+
+function getChineseAnchorWeight(token) {
+  if (!token || !isPureCJKToken(token)) return 0;
+
+  if (CJK_STOP_WORDS.has(token)) return 0;
+  if (CJK_WEAK_MODIFIERS.has(token)) return 0;
+
+  if (CJK_ANCHOR_WORDS.has(token)) return 3;
+
+  const semanticClass = getSemanticClass(token);
+  if (semanticClass) return 2;
+
+  if (token.length >= 3) {
+    if (/[眼眉唇脸手指腕肩胸心喉颈泪血光影风雨雪夜月声门窗房屋室街城林海]/.test(token)) {
       return 2;
     }
 
-    if (mode === 'medium') {
-      if (len <= 1) return 0;
-      if (len <= 3) return 1;
-      if (len <= 6) return 2;
-      return 3;
+    if (/[看望视听说问答笑哭走跑转停伸握抱推拉靠贴触吻咬抬低垂颤抖]/.test(token)) {
+      return 2;
     }
 
-    if (mode === 'strong') {
-      if (len <= 1) return 0;
-      if (len <= 2) return 1;
-      if (len <= 4) return 2;
-      return Math.min(3, Math.ceil(len * 0.45));
+    return mode === 'strong' ? 1 : 0;
+  }
+
+  if (token.length === 2) {
+    if (/[眼眉唇脸手心光影风雨雪夜月声门窗]/.test(token)) {
+      return 2;
     }
+
+    if (mode === 'strong' && !CJK_STOP_WORDS.has(token)) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+function createChineseAnchorState() {
+  return {
+    anchorsInSentence: 0,
+    tokensSinceAnchor: 99,
+  };
+}
+
+function resetChineseAnchorState(state) {
+  state.anchorsInSentence = 0;
+  state.tokensSinceAnchor = 99;
+}
+
+function canRenderChineseAnchor(token, state, weight) {
+  if (weight <= 0) return false;
+
+  const maxAnchors =
+    mode === 'light' ? 2 :
+    mode === 'medium' ? 4 :
+    7;
+
+  const minGap =
+    mode === 'light' ? 3 :
+    mode === 'medium' ? 1 :
+    0;
+
+  if (state.anchorsInSentence >= maxAnchors) return false;
+
+  if (weight >= 3) {
+    return true;
+  }
+
+  if (state.tokensSinceAnchor < minGap) return false;
+
+  if (mode === 'light') {
+    return weight >= 3;
+  }
+
+  if (mode === 'medium') {
+    return weight >= 2;
+  }
+
+  if (mode === 'strong') {
+    return weight >= 1;
+  }
+
+  return false;
+}
+
+function getChineseBoldLength(token, weight) {
+  const len = token.length;
+
+  if (weight >= 3) {
+    if (len <= 4) return len;
+    return Math.min(4, Math.ceil(len * 0.55));
+  }
+
+  if (weight === 2) {
+    if (len <= 3) return len;
+    return Math.min(3, Math.ceil(len * 0.45));
+  }
+
+  if (weight === 1) {
+    if (mode === 'strong') {
+      if (len <= 2) return len;
+      return Math.min(2, Math.ceil(len * 0.35));
+    }
+
+    return 0;
   }
 
   return 0;
@@ -268,21 +788,21 @@ function getSemanticClass(token) {
   const lower = token.toLowerCase();
 
   if (
-    /爱|喜欢|恨|哭|笑|心|梦|怕|痛|温柔|孤独|命运|希望|绝望|愤怒|难过|快乐|悲伤|焦虑|安心|害怕|幸福|沉默|担心|怜悯|关心|安慰/.test(token) ||
+    /爱|喜欢|恨|哭|笑|心|梦|怕|痛|温柔|孤独|命运|希望|绝望|愤怒|难过|快乐|悲伤|焦虑|安心|害怕|幸福|沉默|担心|怜悯|关心|安慰|慌乱|紧张|心疼|失神|动摇|压抑|疲惫|疼痛/.test(token) ||
     /love|like|hate|cry|smile|heart|dream|fear|pain|gentle|lonely|fate|hope|despair|angry|sad|anxious|safe|happy|silence|worried|worry|comfort|compassion|concern|caring|afraid|relief|tender|sorrow|grief/.test(lower)
   ) {
     return 'adhd-semantic-emotion';
   }
 
   if (
-    /说|问|看|走|跑|伸|握|抱|吻|低头|抬眼|靠近|离开|推开|转身|停下|颤抖|呼吸|触碰|凝视|醒来|治愈|恢复|寻找|握住|扶起/.test(token) ||
+    /说|问|看|走|跑|伸|握|抱|吻|低头|抬眼|靠近|离开|推开|转身|停下|颤抖|呼吸|触碰|凝视|醒来|治愈|恢复|寻找|握住|扶起|皱起|开口|回答|注视|抚摸|亲吻|闭眼|睁眼/.test(token) ||
     /say|said|ask|asked|look|walk|run|reach|hold|hug|kiss|breathe|touch|stare|shiver|leave|turn|stop|wake|heal|find|search|clasp|restore|move|step|lean|whisper|watch|open|close/.test(lower)
   ) {
     return 'adhd-semantic-action';
   }
 
   if (
-    /夜|雨|雪|风|光|影|门|窗|房间|街|天空|神殿|世界|声音|颜色|镜头|阳光|黑暗|森林|城市|海|月|冬日|夏天|空气|屏幕/.test(token) ||
+    /夜|雨|雪|风|光|影|门|窗|房间|街|天空|神殿|世界|声音|颜色|镜头|阳光|黑暗|森林|城市|海|月|冬日|夏天|空气|屏幕|灯光|月光|阴影|黄昏|黎明/.test(token) ||
     /night|rain|snow|wind|light|shadow|door|window|room|street|sky|forest|city|sea|moon|sun|dark|world|voice|sound|glow|amber|magic|winter|summer|air|screen|garden|river/.test(lower)
   ) {
     return 'adhd-semantic-scene';
@@ -291,15 +811,69 @@ function getSemanticClass(token) {
   return '';
 }
 
+function appendReadableToken(fragment, token, cut, allowWhole = false) {
+  if (cut <= 0) {
+    fragment.appendChild(document.createTextNode(token));
+    return;
+  }
+
+  if (cut >= token.length && !allowWhole) {
+    fragment.appendChild(document.createTextNode(token));
+    return;
+  }
+
+  const wrapper = document.createElement('span');
+  const semanticClass = getSemanticClass(token);
+  wrapper.className = semanticClass ? `adhd-token ${semanticClass}` : 'adhd-token';
+
+  const bold = document.createElement('span');
+  bold.className = 'adhd-bold';
+  bold.textContent = token.slice(0, cut);
+
+  wrapper.appendChild(bold);
+
+  if (cut < token.length) {
+    const rest = document.createElement('span');
+    rest.className = 'adhd-rest';
+    rest.textContent = token.slice(cut);
+    wrapper.appendChild(rest);
+  }
+
+  fragment.appendChild(wrapper);
+}
+
 function createReadableFragment(text) {
   const fragment = document.createDocumentFragment();
   const tokens = segmentText(text);
+  const cjkState = createChineseAnchorState();
 
   for (const token of tokens) {
     if (!token) continue;
 
     if (!token.trim() || isWhitespaceOrPunctuation(token)) {
       fragment.appendChild(document.createTextNode(token));
+
+      if (isSentenceBoundary(token)) {
+        resetChineseAnchorState(cjkState);
+      }
+
+      continue;
+    }
+
+    if (isPureCJKToken(token)) {
+      const weight = getChineseAnchorWeight(token);
+      const shouldAnchor = canRenderChineseAnchor(token, cjkState, weight);
+      const cut = shouldAnchor ? getChineseBoldLength(token, weight) : 0;
+
+      if (shouldAnchor && cut > 0) {
+        appendReadableToken(fragment, token, cut, true);
+        cjkState.anchorsInSentence += 1;
+        cjkState.tokensSinceAnchor = 0;
+      } else {
+        fragment.appendChild(document.createTextNode(token));
+        cjkState.tokensSinceAnchor += 1;
+      }
+
       continue;
     }
 
@@ -310,21 +884,7 @@ function createReadableFragment(text) {
       continue;
     }
 
-    const wrapper = document.createElement('span');
-    const semanticClass = getSemanticClass(token);
-    wrapper.className = semanticClass ? `adhd-token ${semanticClass}` : 'adhd-token';
-
-    const bold = document.createElement('span');
-    bold.className = 'adhd-bold';
-    bold.textContent = token.slice(0, cut);
-
-    const rest = document.createElement('span');
-    rest.className = 'adhd-rest';
-    rest.textContent = token.slice(cut);
-
-    wrapper.appendChild(bold);
-    wrapper.appendChild(rest);
-    fragment.appendChild(wrapper);
+    appendReadableToken(fragment, token, cut, false);
   }
 
   return fragment;
@@ -517,18 +1077,18 @@ function processElement(element, force = false) {
   const alreadyDone = element.dataset.adhdReaderDone === '1';
   const oldSignature = element.dataset.adhdReaderSignature || '';
   const oldMode = element.dataset.adhdReaderMode || '';
-  const oldLayout = element.dataset.adhdReaderLayout || '';
   const hasMarkup = Boolean(element.querySelector('.adhd-token'));
 
   if (
     alreadyDone &&
-    (currentSignature !== oldSignature || oldMode !== mode || oldLayout !== layoutMode || !hasMarkup)
+    (currentSignature !== oldSignature || oldMode !== mode || !hasMarkup)
   ) {
     safeResetElement(element);
   }
 
   if (!force && element.dataset.adhdReaderDone === '1') {
     applyAdaptiveTypography(element, currentSignature);
+    element.dataset.adhdReaderLayout = layoutMode;
     return;
   }
 
