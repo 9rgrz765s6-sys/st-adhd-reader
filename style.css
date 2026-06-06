@@ -1,11 +1,18 @@
+/* ADHD Reader V7.8 CSS
+   Stronger visual contrast + mobile safe-area polish
+*/
+
+/* 主体阅读排版 */
 body.adhd-reader-enabled .mes_text {
   line-height: var(--adhd-line-height, 1.72);
   letter-spacing: var(--adhd-letter-spacing, 0.012em);
   word-spacing: var(--adhd-word-spacing, 0.035em);
   max-width: min(var(--adhd-max-width, 72ch), 100%);
   overflow-wrap: break-word;
+  text-rendering: optimizeLegibility;
 }
 
+/* 段落间距 */
 body.adhd-reader-enabled .mes_text p,
 body.adhd-reader-enabled .mes_text div {
   margin-bottom: var(--adhd-paragraph-gap, 0.62em);
@@ -15,33 +22,65 @@ body.adhd-reader-enabled .mes_text br {
   line-height: calc(var(--adhd-line-height, 1.72) * 0.92);
 }
 
+/* Token 基础 */
 body.adhd-reader-enabled .adhd-token {
   display: inline;
 }
 
+/* 锚点文字 */
 body.adhd-reader-enabled .adhd-bold {
   font-weight: 900;
+  opacity: 1;
 }
 
+/* 非锚点文字 */
 body.adhd-reader-enabled .adhd-rest {
   font-weight: 400;
+  transition: opacity 0.12s ease;
 }
 
+/* 三档视觉强度：V7.8 对应更重的 JS 档位 */
 body.adhd-reader-mode-light .adhd-rest {
-  opacity: 0.92;
+  opacity: 0.86;
 }
 
 body.adhd-reader-mode-medium .adhd-rest {
-  opacity: 0.82;
+  opacity: 0.74;
 }
 
 body.adhd-reader-mode-strong .adhd-rest {
-  opacity: 0.68;
+  opacity: 0.56;
 }
 
+/* 中文粗体在部分 Android / HarmonyOS WebView 不够明显，轻微增强锚点边缘 */
+body.adhd-reader-enabled .adhd-bold {
+  text-shadow:
+    0.012em 0 currentColor,
+    -0.012em 0 currentColor;
+}
+
+body.adhd-reader-mode-light .adhd-bold {
+  text-shadow:
+    0.008em 0 currentColor,
+    -0.008em 0 currentColor;
+}
+
+body.adhd-reader-mode-medium .adhd-bold {
+  text-shadow:
+    0.012em 0 currentColor,
+    -0.012em 0 currentColor;
+}
+
+body.adhd-reader-mode-strong .adhd-bold {
+  text-shadow:
+    0.016em 0 currentColor,
+    -0.016em 0 currentColor;
+}
+
+/* 避免原本斜体/粗体里的 rest 被压得过淡 */
 body.adhd-reader-enabled em .adhd-rest,
 body.adhd-reader-enabled i .adhd-rest {
-  opacity: 0.88;
+  opacity: 0.86;
 }
 
 body.adhd-reader-enabled strong .adhd-rest,
@@ -49,6 +88,7 @@ body.adhd-reader-enabled b .adhd-rest {
   opacity: 1;
 }
 
+/* 柔和语义色彩 */
 body.adhd-reader-color-soft .adhd-semantic-emotion .adhd-bold {
   color: rgba(255, 150, 185, 1);
 }
@@ -96,14 +136,21 @@ body.adhd-reader-color-soft .adhd-semantic-scene .adhd-bold {
   color: inherit;
   font-size: 12px;
   font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* 通用兜底控制条：只有找不到扩展设置页时才出现 */
+.adhd-reader-settings-buttons button:active {
+  transform: scale(0.98);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* 通用兜底控制条 */
 .adhd-reader-fallback-bar {
   position: fixed;
   left: 10px;
   right: 10px;
-  bottom: 10px;
+  bottom: max(10px, env(safe-area-inset-bottom));
   z-index: 999998;
   padding: 10px;
   border-radius: 14px;
@@ -111,6 +158,7 @@ body.adhd-reader-color-soft .adhd-semantic-scene .adhd-bold {
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.38);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: white;
 }
 
@@ -131,6 +179,11 @@ body.adhd-reader-color-soft .adhd-semantic-scene .adhd-bold {
   flex-wrap: nowrap;
   gap: 6px;
   padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.adhd-reader-fallback-bar .adhd-reader-settings-buttons::-webkit-scrollbar {
+  display: none;
 }
 
 .adhd-reader-fallback-bar .adhd-reader-settings-buttons button {
@@ -170,8 +223,4 @@ body.adhd-reader-focus-off #adhd-reader-ruler {
 
 #adhd-reader-ruler.adhd-reader-ruler-visible {
   opacity: 1;
-}
-/* HarmonyOS / Android WebView 中文字体加粗兼容补丁 */
-body.adhd-reader-enabled .adhd-token .adhd-bold {
-  font-weight: 900;
 }
