@@ -1,5 +1,5 @@
-// ADHD Reader V7.5
-// Chinese Semantic Anchor Update
+// ADHD Reader V7.6
+// Chinese Visible Semantic Anchor Update
 
 const EXT_ID = 'adhd-reader';
 
@@ -85,6 +85,7 @@ const CJK_STOP_WORDS = new Set([
   '喔',
   '嘛',
   '啦',
+  '罢',
   '也',
   '都',
   '就',
@@ -96,17 +97,23 @@ const CJK_STOP_WORDS = new Set([
   '太',
   '挺',
   '真',
+  '蛮',
+  '颇',
   '却',
   '而',
   '并',
+  '且',
   '和',
   '与',
   '或',
   '及',
+  '跟',
+  '同',
   '在',
   '从',
   '向',
   '往',
+  '朝',
   '被',
   '把',
   '让',
@@ -115,6 +122,8 @@ const CJK_STOP_WORDS = new Set([
   '比',
   '为',
   '于',
+  '由',
+  '因',
   '中',
   '里',
   '内',
@@ -138,6 +147,7 @@ const CJK_STOP_WORDS = new Set([
   '其',
   '该',
   '此',
+  '彼',
   '之',
   '所',
   '才',
@@ -145,24 +155,26 @@ const CJK_STOP_WORDS = new Set([
   '只',
   '仅',
   '再',
-  '又',
   '可',
   '能',
   '会',
   '要',
   '想',
+  '应',
+  '该',
   '是',
   '有',
   '没',
-  '不',
   '无',
+  '不',
   '非',
   '已',
   '将',
-  '被',
-  '它',
+  '曾',
+  '正',
   '他',
   '她',
+  '它',
   '我',
   '你',
   '您',
@@ -172,6 +184,26 @@ const CJK_STOP_WORDS = new Set([
   '怎么',
   '怎样',
   '为什么',
+  '不是',
+  '没有',
+  '不能',
+  '不会',
+  '不要',
+  '只是',
+  '可是',
+  '但是',
+  '然而',
+  '然后',
+  '于是',
+  '所以',
+  '因为',
+  '如果',
+  '虽然',
+  '已经',
+  '正在',
+  '可以',
+  '可能',
+  '应该',
 ]);
 
 const CJK_WEAK_MODIFIERS = new Set([
@@ -193,8 +225,6 @@ const CJK_WEAK_MODIFIERS = new Set([
   '或许',
   '也许',
   '可能',
-  '只是',
-  '仅仅',
   '依旧',
   '仍然',
   '终于',
@@ -217,12 +247,19 @@ const CJK_WEAK_MODIFIERS = new Set([
   '越加',
   '那么',
   '这么',
+  '轻声',
+  '低低',
+  '小声',
+  '悄悄',
+  '静静',
+  '默默',
 ]);
 
 const CJK_ANCHOR_WORDS = new Set([
-  // 常见动作
+  // 动作 / 行为
   '皱起',
   '蹙起',
+  '挑眉',
   '抬眼',
   '垂眼',
   '低头',
@@ -263,6 +300,8 @@ const CJK_ANCHOR_WORDS = new Set([
   '捧起',
   '托起',
   '抚摸',
+  '抚过',
+  '擦过',
   '触碰',
   '碰到',
   '吻上',
@@ -305,6 +344,18 @@ const CJK_ANCHOR_WORDS = new Set([
   '睡去',
   '闭眼',
   '睁眼',
+  '眨眼',
+  '移开',
+  '躲开',
+  '避开',
+  '靠拢',
+  '贴住',
+  '蜷缩',
+  '跪下',
+  '俯身',
+  '弯腰',
+  '低笑',
+  '叹息',
 
   // 身体 / 表情
   '眉',
@@ -353,6 +404,10 @@ const CJK_ANCHOR_WORDS = new Set([
   '黑发',
   '白发',
   '银发',
+  '伤口',
+  '血迹',
+  '泪水',
+  '泪痕',
 
   // 情绪 / 状态
   '爱意',
@@ -397,6 +452,13 @@ const CJK_ANCHOR_WORDS = new Set([
   '虚弱',
   '疼痛',
   '刺痛',
+  '窒息',
+  '眩晕',
+  '混乱',
+  '柔软',
+  '僵硬',
+  '滚烫',
+  '寒冷',
 
   // 场景 / 氛围
   '夜',
@@ -419,6 +481,8 @@ const CJK_ANCHOR_WORDS = new Set([
   '阳光',
   '阴影',
   '黑暗',
+  '昏暗',
+  '明亮',
   '黄昏',
   '黎明',
   '清晨',
@@ -449,6 +513,40 @@ const CJK_ANCHOR_WORDS = new Set([
   '屏幕',
   '镜头',
 ]);
+
+const CJK_SINGLE_ANCHOR_CHARS = new Set([
+  '眉',
+  '眼',
+  '唇',
+  '手',
+  '血',
+  '泪',
+  '心',
+  '光',
+  '影',
+  '风',
+  '雨',
+  '雪',
+  '夜',
+  '月',
+  '门',
+  '窗',
+  '海',
+  '火',
+  '声',
+  '梦',
+  '痛',
+  '怕',
+  '笑',
+  '哭',
+  '吻',
+]);
+
+const CJK_IMPORTANT_CHAR_PATTERN =
+  /[眼眉唇脸手指腕肩胸心喉颈泪血光影风雨雪夜月声门窗房屋室街城林海梦痛怕笑哭吻看望视听说问答走跑转停伸握抱推拉靠贴触咬抬低垂颤抖冷热暗明]/;
+
+const CJK_ACTION_CHAR_PATTERN =
+  /[看望视听说问答笑哭走跑转停伸握抱推拉靠贴触吻咬抬低垂颤抖怔愣僵退离靠贴]/;
 
 const CJK_DICTIONARY = Array.from(
   new Set([
@@ -509,7 +607,7 @@ function splitChineseBuffer(text) {
   while (i < text.length) {
     const single = text[i];
 
-    if (CJK_STOP_WORDS.has(single) || CJK_ANCHOR_WORDS.has(single)) {
+    if (CJK_STOP_WORDS.has(single) || CJK_SINGLE_ANCHOR_CHARS.has(single)) {
       result.push(single);
       i += 1;
       continue;
@@ -532,13 +630,20 @@ function splitChineseBuffer(text) {
 
     const remain = text.length - i;
 
-    if (remain >= 2) {
+    if (remain >= 4) {
       const nextTwo = text.slice(i, i + 2);
       result.push(nextTwo);
       i += 2;
+    } else if (remain === 3) {
+      result.push(text.slice(i, i + 2));
+      result.push(text.slice(i + 2));
+      break;
+    } else if (remain === 2) {
+      result.push(text.slice(i, i + 2));
+      break;
     } else {
       result.push(single);
-      i += 1;
+      break;
     }
   }
 
@@ -675,35 +780,56 @@ function getBoldLength(token) {
   return 0;
 }
 
+function getSemanticClass(token) {
+  const lower = token.toLowerCase();
+
+  if (
+    /爱|喜欢|恨|哭|笑|心|梦|怕|痛|温柔|孤独|命运|希望|绝望|愤怒|难过|快乐|悲伤|焦虑|安心|害怕|幸福|沉默|担心|怜悯|关心|安慰|慌乱|紧张|心疼|失神|动摇|压抑|疲惫|疼痛|寂寞|恐惧|悲伤|愤怒|灼热|冰冷/.test(token) ||
+    /love|like|hate|cry|smile|heart|dream|fear|pain|gentle|lonely|fate|hope|despair|angry|sad|anxious|safe|happy|silence|worried|worry|comfort|compassion|concern|caring|afraid|relief|tender|sorrow|grief/.test(lower)
+  ) {
+    return 'adhd-semantic-emotion';
+  }
+
+  if (
+    /说|问|看|走|跑|伸|握|抱|吻|低头|抬眼|靠近|离开|推开|转身|停下|颤抖|呼吸|触碰|凝视|醒来|治愈|恢复|寻找|握住|扶起|皱起|开口|回答|注视|抚摸|亲吻|闭眼|睁眼|垂眼|回头|偏头|侧头|攥住|抱住|搂住|拉住|按住/.test(token) ||
+    /say|said|ask|asked|look|walk|run|reach|hold|hug|kiss|breathe|touch|stare|shiver|leave|turn|stop|wake|heal|find|search|clasp|restore|move|step|lean|whisper|watch|open|close/.test(lower)
+  ) {
+    return 'adhd-semantic-action';
+  }
+
+  if (
+    /夜|雨|雪|风|光|影|门|窗|房间|街|天空|神殿|世界|声音|颜色|镜头|阳光|黑暗|森林|城市|海|月|冬日|夏天|空气|屏幕|灯光|月光|阴影|黄昏|黎明|昏暗|雨声|风声|雪声/.test(token) ||
+    /night|rain|snow|wind|light|shadow|door|window|room|street|sky|forest|city|sea|moon|sun|dark|world|voice|sound|glow|amber|magic|winter|summer|air|screen|garden|river/.test(lower)
+  ) {
+    return 'adhd-semantic-scene';
+  }
+
+  return '';
+}
+
 function getChineseAnchorWeight(token) {
   if (!token || !isPureCJKToken(token)) return 0;
 
   if (CJK_STOP_WORDS.has(token)) return 0;
   if (CJK_WEAK_MODIFIERS.has(token)) return 0;
 
-  if (CJK_ANCHOR_WORDS.has(token)) return 3;
+  if (CJK_ANCHOR_WORDS.has(token)) return 4;
+  if (token.length === 1 && CJK_SINGLE_ANCHOR_CHARS.has(token)) return 4;
 
   const semanticClass = getSemanticClass(token);
-  if (semanticClass) return 2;
+  if (semanticClass) return 3;
 
   if (token.length >= 3) {
-    if (/[眼眉唇脸手指腕肩胸心喉颈泪血光影风雨雪夜月声门窗房屋室街城林海]/.test(token)) {
-      return 2;
-    }
-
-    if (/[看望视听说问答笑哭走跑转停伸握抱推拉靠贴触吻咬抬低垂颤抖]/.test(token)) {
-      return 2;
-    }
-
+    if (CJK_IMPORTANT_CHAR_PATTERN.test(token)) return 2;
+    if (CJK_ACTION_CHAR_PATTERN.test(token)) return 2;
     return mode === 'strong' ? 1 : 0;
   }
 
   if (token.length === 2) {
-    if (/[眼眉唇脸手心光影风雨雪夜月声门窗]/.test(token)) {
-      return 2;
-    }
+    if (CJK_IMPORTANT_CHAR_PATTERN.test(token)) return 2;
+    if (CJK_ACTION_CHAR_PATTERN.test(token)) return 2;
 
-    if (mode === 'strong' && !CJK_STOP_WORDS.has(token)) {
+    if (mode === 'medium' || mode === 'strong') {
       return 1;
     }
   }
@@ -727,33 +853,27 @@ function canRenderChineseAnchor(token, state, weight) {
   if (weight <= 0) return false;
 
   const maxAnchors =
-    mode === 'light' ? 2 :
-    mode === 'medium' ? 4 :
-    7;
-
-  const minGap =
     mode === 'light' ? 3 :
-    mode === 'medium' ? 1 :
-    0;
+    mode === 'medium' ? 6 :
+    10;
 
   if (state.anchorsInSentence >= maxAnchors) return false;
 
-  if (weight >= 3) {
-    return true;
-  }
-
-  if (state.tokensSinceAnchor < minGap) return false;
+  if (weight >= 4) return true;
 
   if (mode === 'light') {
-    return weight >= 3;
+    return weight >= 3 && state.tokensSinceAnchor >= 2;
   }
 
   if (mode === 'medium') {
-    return weight >= 2;
+    if (weight >= 3) return state.tokensSinceAnchor >= 1;
+    if (weight === 2) return state.tokensSinceAnchor >= 1;
+    if (weight === 1) return state.tokensSinceAnchor >= 2;
   }
 
   if (mode === 'strong') {
-    return weight >= 1;
+    if (weight >= 2) return true;
+    if (weight === 1) return state.tokensSinceAnchor >= 1;
   }
 
   return false;
@@ -761,54 +881,29 @@ function canRenderChineseAnchor(token, state, weight) {
 
 function getChineseBoldLength(token, weight) {
   const len = token.length;
+  if (len <= 0) return 0;
 
-  if (weight >= 3) {
-    if (len <= 4) return len;
-    return Math.min(4, Math.ceil(len * 0.55));
+  if (len === 1) {
+    return weight >= 4 ? 1 : 0;
   }
 
-  if (weight === 2) {
-    if (len <= 3) return len;
-    return Math.min(3, Math.ceil(len * 0.45));
+  if (len === 2) {
+    return 1;
+  }
+
+  if (weight >= 4) {
+    return Math.min(2, Math.ceil(len * 0.45));
+  }
+
+  if (weight >= 2) {
+    return 1;
   }
 
   if (weight === 1) {
-    if (mode === 'strong') {
-      if (len <= 2) return len;
-      return Math.min(2, Math.ceil(len * 0.35));
-    }
-
-    return 0;
+    return 1;
   }
 
   return 0;
-}
-
-function getSemanticClass(token) {
-  const lower = token.toLowerCase();
-
-  if (
-    /爱|喜欢|恨|哭|笑|心|梦|怕|痛|温柔|孤独|命运|希望|绝望|愤怒|难过|快乐|悲伤|焦虑|安心|害怕|幸福|沉默|担心|怜悯|关心|安慰|慌乱|紧张|心疼|失神|动摇|压抑|疲惫|疼痛/.test(token) ||
-    /love|like|hate|cry|smile|heart|dream|fear|pain|gentle|lonely|fate|hope|despair|angry|sad|anxious|safe|happy|silence|worried|worry|comfort|compassion|concern|caring|afraid|relief|tender|sorrow|grief/.test(lower)
-  ) {
-    return 'adhd-semantic-emotion';
-  }
-
-  if (
-    /说|问|看|走|跑|伸|握|抱|吻|低头|抬眼|靠近|离开|推开|转身|停下|颤抖|呼吸|触碰|凝视|醒来|治愈|恢复|寻找|握住|扶起|皱起|开口|回答|注视|抚摸|亲吻|闭眼|睁眼/.test(token) ||
-    /say|said|ask|asked|look|walk|run|reach|hold|hug|kiss|breathe|touch|stare|shiver|leave|turn|stop|wake|heal|find|search|clasp|restore|move|step|lean|whisper|watch|open|close/.test(lower)
-  ) {
-    return 'adhd-semantic-action';
-  }
-
-  if (
-    /夜|雨|雪|风|光|影|门|窗|房间|街|天空|神殿|世界|声音|颜色|镜头|阳光|黑暗|森林|城市|海|月|冬日|夏天|空气|屏幕|灯光|月光|阴影|黄昏|黎明/.test(token) ||
-    /night|rain|snow|wind|light|shadow|door|window|room|street|sky|forest|city|sea|moon|sun|dark|world|voice|sound|glow|amber|magic|winter|summer|air|screen|garden|river/.test(lower)
-  ) {
-    return 'adhd-semantic-scene';
-  }
-
-  return '';
 }
 
 function appendReadableToken(fragment, token, cut, allowWhole = false) {
@@ -866,7 +961,7 @@ function createReadableFragment(text) {
       const cut = shouldAnchor ? getChineseBoldLength(token, weight) : 0;
 
       if (shouldAnchor && cut > 0) {
-        appendReadableToken(fragment, token, cut, true);
+        appendReadableToken(fragment, token, cut, token.length === 1);
         cjkState.anchorsInSentence += 1;
         cjkState.tokensSinceAnchor = 0;
       } else {
