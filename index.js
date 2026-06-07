@@ -1,34 +1,97 @@
-// ADHD Reader V7.8.1
-// Desktop Width Hotfix: wider desktop text columns, mobile layout unaffected
+// ADHD Reader V7.8.2
+// Bilingual UI Mini Update: Chinese / English UI switch
+// Based on V7.8.1 Desktop Width Hotfix
 
 const EXT_ID = 'adhd-reader';
 
 const MODES = ['off', 'light', 'medium', 'strong'];
-const MODE_LABELS = {
-  off: 'OFF',
-  light: '轻',
-  medium: '中',
-  strong: '强',
-};
-
 const FOCUS_MODES = ['off', 'soft', 'strong'];
-const FOCUS_LABELS = {
-  off: '聚焦：关',
-  soft: '聚焦：柔',
-  strong: '聚焦：强',
-};
-
 const COLOR_MODES = ['off', 'soft'];
-const COLOR_LABELS = {
-  off: '彩色：关',
-  soft: '彩色：柔',
-};
-
 const LAYOUT_MODES = ['auto', 'compact', 'comfort'];
-const LAYOUT_LABELS = {
-  auto: '排版：自动',
-  compact: '排版：紧凑',
-  comfort: '排版：舒展',
+const UI_LANGS = ['zh', 'en'];
+
+const LABELS = {
+  zh: {
+    title: 'ADHD Reader',
+    desc: '仿生阅读、自动排版、聚焦线与轻量高亮。',
+    fallbackTitle: 'ADHD Reader 通用入口',
+    fallbackDesc: '未找到扩展设置页，已启用兜底控制条。',
+
+    modePrefix: '模式：',
+    layoutPrefix: '',
+    focusPrefix: '',
+    colorPrefix: '',
+
+    refresh: '重刷',
+    refreshed: '已重刷',
+    reset: '重置',
+    language: '语言：中文',
+
+    modes: {
+      off: 'OFF',
+      light: '轻',
+      medium: '中',
+      strong: '强',
+    },
+
+    focus: {
+      off: '聚焦：关',
+      soft: '聚焦：柔',
+      strong: '聚焦：强',
+    },
+
+    color: {
+      off: '彩色：关',
+      soft: '彩色：柔',
+    },
+
+    layout: {
+      auto: '排版：自动',
+      compact: '排版：紧凑',
+      comfort: '排版：舒展',
+    },
+  },
+
+  en: {
+    title: 'ADHD Reader',
+    desc: 'Bionic-style reading, adaptive layout, focus line, and soft highlighting.',
+    fallbackTitle: 'ADHD Reader Quick Controls',
+    fallbackDesc: 'Extension settings panel was not found. Fallback controls are enabled.',
+
+    modePrefix: 'Mode: ',
+    layoutPrefix: 'Layout: ',
+    focusPrefix: 'Focus: ',
+    colorPrefix: 'Color: ',
+
+    refresh: 'Refresh',
+    refreshed: 'Refreshed',
+    reset: 'Reset',
+    language: 'Language: English',
+
+    modes: {
+      off: 'Off',
+      light: 'Light',
+      medium: 'Medium',
+      strong: 'Strong',
+    },
+
+    focus: {
+      off: 'Off',
+      soft: 'Soft',
+      strong: 'Strong',
+    },
+
+    color: {
+      off: 'Off',
+      soft: 'Soft',
+    },
+
+    layout: {
+      auto: 'Auto',
+      compact: 'Compact',
+      comfort: 'Comfort',
+    },
+  },
 };
 
 let mode = localStorage.getItem(`${EXT_ID}-mode`) || 'medium';
@@ -42,6 +105,9 @@ if (!COLOR_MODES.includes(colorMode)) colorMode = 'off';
 
 let layoutMode = localStorage.getItem(`${EXT_ID}-layout`) || 'auto';
 if (!LAYOUT_MODES.includes(layoutMode)) layoutMode = 'auto';
+
+let uiLang = localStorage.getItem(`${EXT_ID}-ui-lang`) || 'zh';
+if (!UI_LANGS.includes(uiLang)) uiLang = 'zh';
 
 let observer = null;
 let processing = false;
@@ -156,6 +222,10 @@ const CJK_DICTIONARY = Array.from(
 )
   .filter(word => word.length > 1)
   .sort((a, b) => b.length - a.length);
+
+function getLabels() {
+  return LABELS[uiLang] || LABELS.zh;
+}
 
 function isEnabled() {
   return mode !== 'off';
@@ -968,13 +1038,16 @@ function updateBodyClasses() {
     'adhd-reader-color-soft',
     'adhd-reader-layout-auto',
     'adhd-reader-layout-compact',
-    'adhd-reader-layout-comfort'
+    'adhd-reader-layout-comfort',
+    'adhd-reader-ui-zh',
+    'adhd-reader-ui-en'
   );
 
   document.body.classList.add(`adhd-reader-mode-${mode}`);
   document.body.classList.add(`adhd-reader-focus-${focusMode}`);
   document.body.classList.add(`adhd-reader-color-${colorMode}`);
   document.body.classList.add(`adhd-reader-layout-${layoutMode}`);
+  document.body.classList.add(`adhd-reader-ui-${uiLang}`);
   document.body.classList.toggle('adhd-reader-enabled', isEnabled());
 }
 
@@ -1033,7 +1106,19 @@ function cycleLayout() {
   updateTypographyOnly();
 }
 
+function cycleLanguage() {
+  const currentIndex = UI_LANGS.indexOf(uiLang);
+  uiLang = UI_LANGS[(currentIndex + 1) % UI_LANGS.length];
+
+  localStorage.setItem(`${EXT_ID}-ui-lang`, uiLang);
+
+  updateBodyClasses();
+  updateAllControls();
+}
+
 function refreshReader() {
+  const labels = getLabels();
+
   restoreAllMessages();
 
   setTimeout(() => {
@@ -1045,9 +1130,9 @@ function refreshReader() {
     applyState(true);
 
     document.querySelectorAll(`.${EXT_ID}-refresh-button`).forEach(button => {
-      button.textContent = '已重刷';
+      button.textContent = labels.refreshed;
       setTimeout(() => {
-        button.textContent = '重刷';
+        button.textContent = getLabels().refresh;
       }, 900);
     });
   }, 80);
@@ -1104,6 +1189,7 @@ function createControlPanel(id, type = 'settings') {
     ? 'adhd-reader-fallback-bar'
     : 'adhd-reader-settings-panel';
   wrapper.dataset.adhdSkip = 'true';
+  wrapper.dataset.adhdPanelType = type;
 
   wrapper.innerHTML = `
     <div class="adhd-reader-settings-title">ADHD Reader</div>
@@ -1115,6 +1201,7 @@ function createControlPanel(id, type = 'settings') {
       <button type="button" class="${EXT_ID}-color-button">彩色</button>
       <button type="button" class="${EXT_ID}-refresh-button">重刷</button>
       <button type="button" class="${EXT_ID}-reset-button">重置</button>
+      <button type="button" class="${EXT_ID}-lang-button">语言</button>
     </div>
   `;
 
@@ -1124,25 +1211,77 @@ function createControlPanel(id, type = 'settings') {
   wrapper.querySelector(`.${EXT_ID}-color-button`)?.addEventListener('click', cycleColor);
   wrapper.querySelector(`.${EXT_ID}-refresh-button`)?.addEventListener('click', refreshReader);
   wrapper.querySelector(`.${EXT_ID}-reset-button`)?.addEventListener('click', resetReader);
+  wrapper.querySelector(`.${EXT_ID}-lang-button`)?.addEventListener('click', cycleLanguage);
 
   return wrapper;
 }
 
+function updatePanelTexts() {
+  const labels = getLabels();
+
+  document
+    .querySelectorAll('.adhd-reader-settings-panel, .adhd-reader-fallback-bar')
+    .forEach(panel => {
+      const isFallback =
+        panel.id === `${EXT_ID}-fallback-bar` ||
+        panel.dataset.adhdPanelType === 'fallback';
+
+      const title = panel.querySelector('.adhd-reader-settings-title');
+      const desc = panel.querySelector('.adhd-reader-settings-desc');
+
+      if (title) {
+        title.textContent = isFallback ? labels.fallbackTitle : labels.title;
+      }
+
+      if (desc) {
+        desc.textContent = isFallback ? labels.fallbackDesc : labels.desc;
+      }
+    });
+}
+
 function updateAllControls() {
+  const labels = getLabels();
+
+  updatePanelTexts();
+
   document.querySelectorAll(`.${EXT_ID}-mode-button`).forEach(button => {
-    button.textContent = `模式：${MODE_LABELS[mode]}`;
+    button.textContent = `${labels.modePrefix}${labels.modes[mode]}`;
   });
 
   document.querySelectorAll(`.${EXT_ID}-layout-button`).forEach(button => {
-    button.textContent = LAYOUT_LABELS[layoutMode];
+    if (uiLang === 'en') {
+      button.textContent = `${labels.layoutPrefix}${labels.layout[layoutMode]}`;
+    } else {
+      button.textContent = labels.layout[layoutMode];
+    }
   });
 
   document.querySelectorAll(`.${EXT_ID}-focus-button`).forEach(button => {
-    button.textContent = FOCUS_LABELS[focusMode];
+    if (uiLang === 'en') {
+      button.textContent = `${labels.focusPrefix}${labels.focus[focusMode]}`;
+    } else {
+      button.textContent = labels.focus[focusMode];
+    }
   });
 
   document.querySelectorAll(`.${EXT_ID}-color-button`).forEach(button => {
-    button.textContent = COLOR_LABELS[colorMode];
+    if (uiLang === 'en') {
+      button.textContent = `${labels.colorPrefix}${labels.color[colorMode]}`;
+    } else {
+      button.textContent = labels.color[colorMode];
+    }
+  });
+
+  document.querySelectorAll(`.${EXT_ID}-refresh-button`).forEach(button => {
+    button.textContent = labels.refresh;
+  });
+
+  document.querySelectorAll(`.${EXT_ID}-reset-button`).forEach(button => {
+    button.textContent = labels.reset;
+  });
+
+  document.querySelectorAll(`.${EXT_ID}-lang-button`).forEach(button => {
+    button.textContent = labels.language;
   });
 }
 
@@ -1170,12 +1309,6 @@ function ensureFallbackBar() {
   }
 
   const bar = createControlPanel(`${EXT_ID}-fallback-bar`, 'fallback');
-
-  const title = bar.querySelector('.adhd-reader-settings-title');
-  if (title) title.textContent = 'ADHD Reader 通用入口';
-
-  const desc = bar.querySelector('.adhd-reader-settings-desc');
-  if (desc) desc.textContent = '未找到扩展设置页，已启用兜底控制条。';
 
   document.body.appendChild(bar);
   updateAllControls();
