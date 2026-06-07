@@ -1,5 +1,5 @@
-// ADHD Reader V7.8
-// Heavy Mode Update: Light = old Medium, Medium = old Strong, Strong = Very Heavy
+// ADHD Reader V7.8.1
+// Desktop Width Hotfix: wider desktop text columns, mobile layout unaffected
 
 const EXT_ID = 'adhd-reader';
 
@@ -704,10 +704,17 @@ function getTypographyForText(text) {
     maxWidth = '100%';
   }
 
-  if (width > 760) {
+  if (width > 1024) {
     lineHeight -= 0.04;
     paragraphGap -= 0.05;
-    maxWidth = '76ch';
+
+    if (layoutMode === 'compact') {
+      maxWidth = '112ch';
+    } else if (layoutMode === 'comfort') {
+      maxWidth = '80ch';
+    } else {
+      maxWidth = '96ch';
+    }
   }
 
   if (mode === 'light') {
